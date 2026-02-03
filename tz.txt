@@ -39,5 +39,6 @@
 
 
 
-токен для бота 8478329807:AAHuNR-wslE-7lft01hzt7Irzl3xzK7ZT2k
+токен для бота TOKEN
+
 
