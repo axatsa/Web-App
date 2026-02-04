@@ -78,28 +78,30 @@ export default function App() {
 
   const [orders, setOrders] = useState<Order[]>([]);
 
-  // Load orders from Supabase on mount
-  useEffect(() => {
-    async function loadOrders() {
-      const { data, error } = await supabase.from('orders').select('*');
-      if (error) {
-        console.error('Error loading orders:', error);
-      } else if (data) {
-        // Convert string dates to Date objects if needed
-        const parsedData = data.map((o: any) => ({
-          ...o,
-          createdAt: new Date(o.createdAt),
-          deliveredAt: o.deliveredAt ? new Date(o.deliveredAt) : undefined,
-        }));
-        setOrders(parsedData);
-      }
+  // Load orders from Supabase
+  const loadOrders = async () => {
+    const { data, error } = await supabase.from('orders').select('*');
+    if (error) {
+      console.error('Error loading orders:', error);
+    } else if (data) {
+      // Convert string dates to Date objects if needed
+      const parsedData = data.map((o: any) => ({
+        ...o,
+        createdAt: new Date(o.createdAt),
+        deliveredAt: o.deliveredAt ? new Date(o.deliveredAt) : undefined,
+      }));
+      setOrders(parsedData);
     }
+  };
+
+  useEffect(() => {
     loadOrders();
 
     // Subscribe to changes (Real-time updates!)
     const subscription = supabase
       .channel('orders_channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        console.log('🔄 Realtime update received:', payload);
         // Reload all orders to be safe or handle delta
         loadOrders();
       })
@@ -136,6 +138,7 @@ export default function App() {
           }}
           onBackToRoles={() => setSelectedOrderId(null)}
           branch={selectedOrder.branch}
+          onRefresh={loadOrders}
         />
       );
     }
@@ -145,6 +148,7 @@ export default function App() {
         orders={orders}
         onSelectOrder={setSelectedOrderId}
         onBackToRoles={() => setSelectedRole(null)}
+        onRefresh={loadOrders}
       />
     );
   }
@@ -163,6 +167,7 @@ export default function App() {
           }}
           onBackToRoles={() => setSelectedOrderId(null)}
           branch={selectedOrder.branch}
+          onRefresh={loadOrders}
         />
       );
     }
@@ -172,6 +177,7 @@ export default function App() {
         orders={orders}
         onSelectOrder={setSelectedOrderId}
         onBackToRoles={() => setSelectedRole(null)}
+        onRefresh={loadOrders}
       />
     );
   }
@@ -185,6 +191,7 @@ export default function App() {
       setSelectedBranch(firstDelivery.branch);
     } else {
       alert('Пока ничего не привезли. Новых доставок для проверки нет.');
+      loadOrders(); // Попробуем обновить данные
     }
   };
 
@@ -198,6 +205,7 @@ export default function App() {
         onCheckDeliveries={handleCheckDeliveries}
         deliveryBranches={deliveryBranches}
         onBack={() => setSelectedRole(null)}
+        onRefresh={loadOrders}
       />
     );
   }
@@ -255,8 +263,10 @@ export default function App() {
           onUpdateOrder={handleUpdateOrder}
           onBackToRoles={handleBack}
           branch={selectedBranch}
+          onRefresh={loadOrders}
         />
       )}
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, MessageSquare, Truck, Check } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquare, Truck, Check, RefreshCcw } from 'lucide-react';
 import type { Order, Branch } from '@/app/App';
 import { getTashkentDate } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
@@ -16,18 +16,20 @@ type SupplierViewProps =
     orders: Order[];
     onSelectOrder: (orderId: string) => void;
     onBackToRoles: () => void;
+    onRefresh?: () => void;
   }
   | {
     order: Order;
     onUpdateOrder: (order: Order) => void;
     onBackToRoles: () => void;
     branch: Branch;
+    onRefresh?: () => void;
   };
 
 export function SupplierView(props: SupplierViewProps) {
   // If showing list of orders
   if ('orders' in props) {
-    const { orders, onSelectOrder, onBackToRoles } = props;
+    const { orders, onSelectOrder, onBackToRoles, onRefresh } = props;
     const activeOrders = orders.filter(o => o.status === 'sent_to_supplier');
 
     return (
@@ -41,7 +43,16 @@ export function SupplierView(props: SupplierViewProps) {
               <Truck className="w-4 h-4" />
               <h1 className="text-lg font-bold">Поставщик</h1>
             </div>
-            <div className="w-9" />
+            {onRefresh ? (
+              <button
+                onClick={onRefresh}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              >
+                <RefreshCcw className="w-5 h-5" />
+              </button>
+            ) : (
+              <div className="w-9" />
+            )}
           </div>
 
           <div className="relative z-10">

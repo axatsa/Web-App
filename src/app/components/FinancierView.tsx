@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, Plus, Trash2, Edit2, Check, X, Wallet, FileText, Calendar, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Send, Plus, Trash2, Edit2, Check, X, Wallet, FileText, Calendar, MessageSquare, RefreshCcw } from 'lucide-react';
 import type { Order, Product, Unit, Branch } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
 
@@ -15,18 +15,20 @@ type FinancierViewProps =
     orders: Order[];
     onSelectOrder: (orderId: string) => void;
     onBackToRoles: () => void;
+    onRefresh?: () => void;
   }
   | {
     order: Order;
     onUpdateOrder: (order: Order) => void;
     onBackToRoles: () => void;
     branch: Branch;
+    onRefresh?: () => void;
   };
 
 export function FinancierView(props: FinancierViewProps) {
   // Если передан массив заявок - показываем список
   if ('orders' in props) {
-    const { orders, onSelectOrder, onBackToRoles } = props;
+    const { orders, onSelectOrder, onBackToRoles, onRefresh } = props;
 
     // Фильтруем заявки по статусам
     const incomingOrders = orders.filter(o => o.status === 'sent_to_financier');
@@ -53,7 +55,16 @@ export function FinancierView(props: FinancierViewProps) {
               <Wallet className="w-4 h-4" />
               <h1 className="text-lg font-bold">Финансист</h1>
             </div>
-            <div className="w-9" />
+            {onRefresh ? (
+              <button
+                onClick={onRefresh}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              >
+                <RefreshCcw className="w-5 h-5" />
+              </button>
+            ) : (
+              <div className="w-9" />
+            )}
           </div>
 
           <div className="relative z-10">
@@ -208,7 +219,7 @@ export function FinancierView(props: FinancierViewProps) {
   }
 
   // Если передан один заказ - показываем детали
-  const { order, onUpdateOrder, onBackToRoles, branch } = props;
+  const { order, onUpdateOrder, onBackToRoles, branch, onRefresh } = props;
   const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
   const [localProducts, setLocalProducts] = useState(order.products);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -318,7 +329,16 @@ export function FinancierView(props: FinancierViewProps) {
               <Wallet className="w-4 h-4" />
               <h1 className="text-lg font-bold">Финансист</h1>
             </div>
-            <div className="w-9" />
+            {onRefresh ? (
+              <button
+                onClick={onRefresh}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              >
+                <RefreshCcw className="w-5 h-5" />
+              </button>
+            ) : (
+              <div className="w-9" />
+            )}
           </div>
 
           <div className="relative z-10">
@@ -401,14 +421,24 @@ export function FinancierView(props: FinancierViewProps) {
             <Wallet className="w-4 h-4" />
             <h1 className="text-lg font-bold">Финансист</h1>
           </div>
-          {!isReadOnly && (
-            <button
-              onClick={() => setIsAdding(true)}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              >
+                <RefreshCcw className="w-5 h-5" />
+              </button>
+            )}
+            {!isReadOnly && (
+              <button
+                onClick={() => setIsAdding(true)}
+                className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="relative z-10 flex items-end justify-between">

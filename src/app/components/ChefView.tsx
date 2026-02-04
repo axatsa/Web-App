@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, ChefHat, MessageSquare, Check } from 'lucide-react';
+import { ArrowLeft, Send, ChefHat, MessageSquare, Check, Trash2, Plus, RefreshCcw } from 'lucide-react';
 import type { Order, Branch } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
 
@@ -15,9 +15,10 @@ type ChefViewProps = {
   onUpdateOrder: (order: Order) => void;
   onBackToRoles: () => void;
   branch: Branch;
+  onRefresh?: () => void;
 };
 
-export function ChefView({ order, onUpdateOrder, onBackToRoles, branch }: ChefViewProps) {
+export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefresh }: ChefViewProps) {
   const [localProducts, setLocalProducts] = useState(order.products);
 
   // Синхронизация localProducts при изменении order.products
@@ -80,7 +81,16 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch }: ChefVi
             <ChefHat className="w-4 h-4" />
             <h1 className="text-lg font-bold">Шеф-повар</h1>
           </div>
-          <div className="w-9" />
+          {onRefresh ? (
+            <button
+              onClick={onRefresh}
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+            >
+              <RefreshCcw className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="w-9" />
+          )}
         </div>
 
         <div className="relative z-10 flex items-end justify-between">

@@ -1,4 +1,4 @@
-import { MapPin, ArrowLeft, Truck, Check } from 'lucide-react';
+import { MapPin, ArrowLeft, Truck, Check, RefreshCcw } from 'lucide-react';
 import type { Branch } from '@/app/App';
 import thompsonLogo from '@/assets/logo.png';
 
@@ -7,6 +7,7 @@ type BranchSelectorProps = {
   onCheckDeliveries: () => void;
   deliveryBranches?: Branch[];
   onBack?: () => void;
+  onRefresh?: () => void;
 };
 
 const branches: { id: Branch; name: string; color: string }[] = [
@@ -16,22 +17,34 @@ const branches: { id: Branch; name: string; color: string }[] = [
   { id: 'olmazar', name: 'Олмазар', color: 'from-[#16a085] to-[#138d75]' },
 ];
 
-export function BranchSelector({ onSelectBranch, onCheckDeliveries, deliveryBranches = [], onBack }: BranchSelectorProps) {
+export function BranchSelector({ onSelectBranch, onCheckDeliveries, deliveryBranches = [], onBack, onRefresh }: BranchSelectorProps) {
   return (
     <div className="min-h-screen bg-white flex flex-col p-6 relative overflow-hidden">
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="self-start mb-6 p-2 hover:bg-gray-100 rounded-lg active:scale-95 transition-transform z-10"
-        >
-          <ArrowLeft className="w-6 h-6 text-gray-900" />
-        </button>
-      )}
+      <div className="flex justify-between items-start mb-6 z-10 relative">
+        {onBack ? (
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-lg active:scale-95 transition-transform"
+          >
+            <ArrowLeft className="w-6 h-6 text-gray-900" />
+          </button>
+        ) : <div />}
+
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full active:scale-90 transition-all shadow-sm border border-gray-100"
+          >
+            <RefreshCcw className="w-5 h-5 text-gray-400" />
+          </button>
+        )}
+      </div>
+
       {/* Background patterns */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2" />
 
-      <div className="flex-1 flex flex-col items-center justify-center z-10">
+      <div className="flex-1 flex flex-col items-center justify-center z-10 w-full">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
             <img
