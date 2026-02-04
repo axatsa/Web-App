@@ -600,36 +600,33 @@ export function FinancierView(props: FinancierViewProps) {
       </main>
 
       {/* Action bar and total summary */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-4 rounded-t-[2.5rem] shadow-2xl z-20">
-        <div className="flex items-center justify-between px-2">
-          <div>
-            <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-1">Итоговая сумма</p>
-            <p className="text-3xl font-black text-gray-900 leading-none">
-              {totalAmount.toLocaleString()} <span className="text-sm font-bold text-gray-400 uppercase ml-1">сум</span>
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center gap-4 rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-20">
+        <div className="flex-1">
+          <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-0.5">Итого</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-2xl font-black text-gray-900 leading-none">
+              {totalAmount.toLocaleString()}
             </p>
-          </div>
-          <div className="text-right">
-            <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-1">Позиций</p>
-            <p className="text-xl font-black text-blue-600 leading-none">{productsWithQuantity}</p>
+            <span className="text-xs font-bold text-gray-400 uppercase">сум</span>
           </div>
         </div>
 
-        {(order.status === 'sent_to_financier' || order.status === 'financier_checking') && (
-          <button
-            onClick={handleSend}
-            disabled={localProducts.length === 0}
-            className="w-full text-white font-bold py-5 rounded-3xl shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 text-lg disabled:opacity-50 hover:opacity-90"
-            style={{ backgroundColor: '#003366', boxShadow: '0 20px 25px -5px rgba(0, 51, 102, 0.3)' }}
-          >
-            <Send className="w-5 h-5" />
-            {order.status === 'sent_to_financier' ? 'Утвердить и отправить поставщику' : 'Завершить заказ и закрыть заявку'}
-          </button>
-        )}
-        {order.status !== 'sent_to_financier' && order.status !== 'financier_checking' && (
-          <div className="text-center p-3 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-            <p className="text-gray-500 text-sm font-medium">Заявка находится в статусе "{order.status}"</p>
-          </div>
-        )}
+        <div className="flex-none">
+          {(order.status === 'sent_to_financier' || order.status === 'financier_checking') ? (
+            <button
+              onClick={handleSend}
+              disabled={localProducts.length === 0}
+              className="bg-[#003366] text-white font-bold py-3 px-6 rounded-2xl shadow-lg shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:active:scale-100"
+            >
+              <Send className="w-4 h-4" />
+              {order.status === 'sent_to_financier' ? 'Утвердить' : 'Завершить'}
+            </button>
+          ) : (
+            <div className="px-4 py-2 bg-gray-100 rounded-xl border border-gray-200">
+              <p className="text-gray-500 text-xs font-bold">{order.status}</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Add Product Modal */}

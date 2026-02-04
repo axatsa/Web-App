@@ -189,22 +189,32 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
       </main>
 
       {/* Action bar and info summary */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-4 rounded-t-[2.5rem] shadow-2xl z-20">
-        {!isReadOnly && (
-          <button
-            onClick={handleSend}
-            className="w-full text-white font-bold py-4 rounded-3xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 text-lg hover:opacity-90"
-            style={{ backgroundColor: '#8B0000', boxShadow: '0 10px 15px -3px rgba(139, 0, 0, 0.3)' }}
-          >
-            <Send className="w-5 h-5" />
-            {order.status === 'sent_to_chef' ? 'Отправить финансисту' : 'Завершить проверку'}
-          </button>
-        )}
-        {isReadOnly && (
-          <div className="text-center p-3 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-            <p className="text-gray-500 text-sm font-medium">Редактирование в данном статусе недоступно</p>
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center gap-4 rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-20">
+        <div className="flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="text-gray-400 text-[10px] uppercase font-black tracking-widest">Позиций:</span>
+            <span className="text-2xl font-black text-gray-900 leading-none">
+              {localProducts.filter(p => p.quantity > 0).length}
+            </span>
           </div>
-        )}
+        </div>
+
+        <div className="flex-none">
+          {!isReadOnly && (
+            <button
+              onClick={handleSend}
+              className="bg-[#8B0000] text-white font-bold py-3 px-6 rounded-2xl shadow-lg shadow-red-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm hover:opacity-90"
+            >
+              <Send className="w-4 h-4" />
+              {order.status === 'sent_to_chef' ? 'Отправить' : 'Завершить'}
+            </button>
+          )}
+          {isReadOnly && (
+            <div className="px-4 py-2 bg-gray-100 rounded-xl border border-gray-200">
+              <p className="text-gray-500 text-xs font-bold">Только чтение</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
