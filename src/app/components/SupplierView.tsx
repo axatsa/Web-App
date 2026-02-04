@@ -31,8 +31,8 @@ export function SupplierView(props: SupplierViewProps) {
     const activeOrders = orders.filter(o => o.status === 'sent_to_supplier');
 
     return (
-      <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
-        <header className="text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#FF6B00' }}>
+      <div className="h-screen overflow-hidden bg-[#f5f5f5] flex flex-col">
+        <header className="flex-none text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#FF6B00' }}>
           <div className="flex items-center justify-between mb-2 relative z-10">
             <button onClick={onBackToRoles} className="p-2 hover:bg-white/20 rounded-full transition-colors">
               <ArrowLeft className="w-5 h-5" />
@@ -49,8 +49,8 @@ export function SupplierView(props: SupplierViewProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 -mt-2">
-          <div className="space-y-4 pb-8">
+        <main className="flex-1 overflow-y-auto p-4 -mt-2 pb-[120px]">
+          <div className="space-y-4">
             {activeOrders.length === 0 ? (
               <div className="bg-white p-12 rounded-[2.5rem] shadow-md border border-gray-100 flex flex-col items-center justify-center text-center">
                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
@@ -132,8 +132,8 @@ export function SupplierView(props: SupplierViewProps) {
   const totalWithPrice = filteredProducts.filter(p => (p.price || 0) > 0).length;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
-      <header className="text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#FF6B00' }}>
+    <div className="h-screen overflow-hidden bg-[#f5f5f5] flex flex-col">
+      <header className="flex-none text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#FF6B00' }}>
         <div className="flex items-center justify-between mb-2 relative z-10">
           <button onClick={onBackToRoles} className="p-2 hover:bg-white/20 rounded-full transition-colors">
             <ArrowLeft className="w-5 h-5" />
@@ -159,8 +159,8 @@ export function SupplierView(props: SupplierViewProps) {
         </div>
       </header>
 
-      <main className="flex-1 p-4 -mt-2">
-        <div className="space-y-8 pb-32">
+      <main className="flex-1 overflow-y-auto p-4 -mt-2 pb-[240px]">
+        <div className="space-y-8">
           {categories.map(category => {
             const categoryProducts = filteredProducts.filter(p => p.category === category);
             return (
@@ -231,7 +231,7 @@ export function SupplierView(props: SupplierViewProps) {
         </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 p-6 space-y-4 rounded-t-[2.5rem] shadow-2xl z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-4 rounded-t-[2.5rem] shadow-2xl z-20">
         <div className="flex items-center justify-between px-2">
           <div>
             <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-1">Сумма заказа</p>
