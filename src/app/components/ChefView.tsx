@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, Send, ChefHat, MessageSquare } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Send, ChefHat, MessageSquare, Check } from 'lucide-react';
 import type { Order, Branch } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
 
@@ -20,17 +20,28 @@ type ChefViewProps = {
 export function ChefView({ order, onUpdateOrder, onBackToRoles, branch }: ChefViewProps) {
   const [localProducts, setLocalProducts] = useState(order.products);
 
-  const handleQuantityChange = (productId: string, value: string) => {
-    const numValue = parseFloat(value) || 0;
+  // Синхронизация localProducts при изменении order.products
+  useEffect(() => {
+    setLocalProducts(order.products);
+  }, [order.products]);
+
+  const handleUpdateProduct = (productId: string, field: string, value: any) => {
     setLocalProducts(prev =>
       prev.map(p =>
-        p.id === productId ? { ...p, quantity: Math.max(0, numValue) } : p
+        p.id === productId ? { ...p, [field]: value } : p
       )
     );
   };
 
   const handleSend = () => {
     if (order.status === 'sent_to_chef') {
+      // Валидация: проверяем, что хотя бы один продукт имеет quantity > 0
+      const hasProducts = localProducts.some(p => p.quantity > 0);
+      if (!hasProducts) {
+        alert('Пожалуйста, укажите количество хотя бы для одного продукта');
+        return;
+      }
+
       onUpdateOrder({
         ...order,
         products: localProducts,
@@ -40,6 +51,7 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch }: ChefVi
     } else if (order.status === 'chef_checking') {
       onUpdateOrder({
         ...order,
+        products: localProducts,
         status: 'financier_checking',
       });
       alert('Проверка завершена. Отправлено финансисту на финальную проверку');
@@ -50,75 +62,111 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch }: ChefVi
   const isCheckingMode = order.status === 'chef_checking';
 
   // Group products by category
-  const categories = Array.from(new Set(localProducts.map(p => p.category)));
+  // In checking mode, show only selected products
+  const displayProducts = isCheckingMode
+    ? localProducts.filter(p => p.quantity > 0)
+    : localProducts;
+
+  const categories = Array.from(new Set(displayProducts.map(p => p.category)));
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
-      <header className="bg-red-600 text-white p-6 pb-8 rounded-b-[3rem] shadow-xl relative overflow-hidden">
-        {/* Pattern overlay */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-
-        <div className="flex items-center justify-between mb-4 relative z-10">
+      <header className="text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#8B0000' }}>
+        <div className="flex items-center justify-between mb-2 relative z-10">
           <button onClick={onBackToRoles} className="p-2 hover:bg-white/20 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <ChefHat className="w-5 h-5" />
-            </div>
-            <h1 className="text-xl font-bold">Шеф-повар</h1>
+            <ChefHat className="w-4 h-4" />
+            <h1 className="text-lg font-bold">Шеф-повар</h1>
           </div>
-          <div className="w-10" />
+          <div className="w-9" />
         </div>
 
-        <div className="relative z-10">
-          <p className="text-white/80 text-sm mb-1 uppercase tracking-wider font-semibold">Филиал: {branchNames[branch]}</p>
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black italic tracking-tight">Неделя {order.weekNumber}</h2>
-            <StatusBadge status={order.status} />
+        <div className="relative z-10 flex items-end justify-between">
+          <div>
+            <p className="text-white/80 text-[10px] uppercase font-semibold">Филиал: {branchNames[branch]}</p>
+            <h2 className="text-xl font-bold italic tracking-tight leading-none">
+              {order.createdAt.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'short'
+              })}
+            </h2>
           </div>
+          <StatusBadge status={order.status} />
         </div>
       </header>
 
-      <main className="flex-1 p-4 -mt-6">
+      <main className="flex-1 p-4 -mt-2">
         <div className="space-y-8 pb-32">
           {categories.map(category => {
-            const categoryProducts = localProducts.filter(p => p.category === category);
+            const categoryProducts = displayProducts.filter(p => p.category === category);
             if (categoryProducts.length === 0) return null;
 
             return (
               <div key={category} className="space-y-4">
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 pl-2 border-l-4 border-red-500">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 pl-2 border-l-4" style={{ borderColor: '#8B0000' }}>
                   {category}
                 </h3>
                 <div className="space-y-3">
                   {categoryProducts.map(product => (
                     <div key={product.id} className="bg-white p-4 rounded-3xl shadow-md border border-gray-100 transition-all active:scale-[0.98]">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between gap-3">
+                        {isCheckingMode && (
+                          <button
+                            onClick={() => handleUpdateProduct(product.id, 'checked', !product.checked)}
+                            className={`mt-1 w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center flex-shrink-0 ${product.checked
+                              ? 'bg-[#8B0000] border-[#8B0000] text-white'
+                              : 'bg-white border-gray-200 text-transparent'
+                              }`}
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
                         <div className="flex-1">
-                          <h4 className="font-bold text-gray-900 text-lg mb-1">{product.name}</h4>
-                          {isCheckingMode && product.comment && (
-                            <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 p-2 rounded-xl mt-1 border border-blue-100">
-                              <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                              <p><b>Поставщик:</b> {product.comment}</p>
+                          <h4 className={`font-bold text-gray-900 text-lg leading-tight mb-1 ${isCheckingMode && product.checked ? 'text-gray-400 line-through' : ''}`}>
+                            {product.name}
+                          </h4>
+                          {isCheckingMode && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {product.price && (
+                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+                                  Цена: {product.price.toLocaleString()} сум
+                                </span>
+                              )}
+                              {product.comment && (
+                                <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 p-2 rounded-xl border border-blue-100 w-full">
+                                  <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                                  <p><b>Поставщик:</b> {product.comment}</p>
+                                </div>
+                              )}
                             </div>
                           )}
+                          {isCheckingMode && (
+                            <textarea
+                              placeholder="Ваш комментарий по доставке..."
+                              value={product.chefComment || ''}
+                              onChange={(e) => handleUpdateProduct(product.id, 'chefComment', e.target.value)}
+                              rows={1}
+                              className="w-full bg-gray-50 border-none rounded-xl px-3 py-2 text-sm mt-2 focus:ring-1 focus:ring-[#8B0000] transition-all resize-none"
+                            />
+                          )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-end gap-1">
                           <div className="relative flex items-center">
                             <input
                               type="number"
                               value={product.quantity || ''}
-                              onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                              onChange={(e) => handleUpdateProduct(product.id, 'quantity', Math.max(0, parseFloat(e.target.value) || 0))}
                               placeholder="0"
-                              disabled={isReadOnly}
-                              className="w-20 bg-gray-50 border-none rounded-2xl px-4 py-2 text-center font-bold text-gray-900 focus:ring-2 focus:ring-red-500 transition-all text-lg disabled:opacity-50"
+                              disabled={isReadOnly || isCheckingMode}
+                              className="w-20 bg-gray-50 border-none rounded-2xl px-2 py-2 text-center font-bold text-gray-900 transition-all text-lg disabled:opacity-50"
+                              style={{ outlineColor: '#8B0000' }}
                             />
-                            <span className="absolute -bottom-5 right-0 left-0 text-[10px] text-center font-bold text-gray-400 uppercase">
-                              {product.unit}
-                            </span>
                           </div>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase">
+                            {product.unit}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -135,7 +183,8 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch }: ChefVi
         {!isReadOnly && (
           <button
             onClick={handleSend}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-3xl shadow-lg shadow-red-200 transition-all active:scale-95 flex items-center justify-center gap-3 text-lg"
+            className="w-full text-white font-bold py-4 rounded-3xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 text-lg hover:opacity-90"
+            style={{ backgroundColor: '#8B0000', boxShadow: '0 10px 15px -3px rgba(139, 0, 0, 0.3)' }}
           >
             <Send className="w-5 h-5" />
             {order.status === 'sent_to_chef' ? 'Отправить финансисту' : 'Завершить проверку'}

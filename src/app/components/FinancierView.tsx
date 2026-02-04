@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, Send, Plus, Trash2, Edit2, Check, X, Wallet } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Send, Plus, Trash2, Edit2, Check, X, Wallet, FileText, Calendar, MessageSquare } from 'lucide-react';
 import type { Order, Product, Unit, Branch } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
 
@@ -10,14 +10,206 @@ const branchNames: Record<Branch, string> = {
   olmazar: 'Олмазар',
 };
 
-type FinancierViewProps = {
-  order: Order;
-  onUpdateOrder: (order: Order) => void;
-  onBackToRoles: () => void;
-  branch: Branch;
-};
+type FinancierViewProps =
+  | {
+    orders: Order[];
+    onSelectOrder: (orderId: string) => void;
+    onBackToRoles: () => void;
+  }
+  | {
+    order: Order;
+    onUpdateOrder: (order: Order) => void;
+    onBackToRoles: () => void;
+    branch: Branch;
+  };
 
-export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: FinancierViewProps) {
+export function FinancierView(props: FinancierViewProps) {
+  // Если передан массив заявок - показываем список
+  if ('orders' in props) {
+    const { orders, onSelectOrder, onBackToRoles } = props;
+
+    // Фильтруем заявки по статусам
+    const incomingOrders = orders.filter(o => o.status === 'sent_to_financier');
+    const checkingOrders = orders.filter(o => o.status === 'financier_checking');
+
+    // Функция для расчета общей суммы заявки
+    const calculateTotal = (order: Order) => {
+      return order.products.reduce((sum, p) => {
+        if (p.price && p.quantity > 0) {
+          return sum + (p.price * p.quantity);
+        }
+        return sum;
+      }, 0);
+    };
+
+    return (
+      <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
+        <header className="text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#003366' }}>
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <button onClick={onBackToRoles} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
+              <h1 className="text-lg font-bold">Финансист</h1>
+            </div>
+            <div className="w-9" />
+          </div>
+
+          <div className="relative z-10">
+            <h2 className="text-xl font-bold italic tracking-tight leading-none">Все заявки</h2>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 -mt-6">
+          <div className="space-y-6 pb-8">
+            {incomingOrders.length > 0 && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Входящие заявки</h3>
+                <div className="space-y-4">
+                  {incomingOrders.map(order => {
+                    const total = calculateTotal(order);
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => onSelectOrder(order.id)}
+                        className="bg-white p-6 rounded-[2.5rem] shadow-md border border-gray-100 transition-all active:scale-[0.99] cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#e3f2fd' }}>
+                                <FileText className="w-6 h-6" style={{ color: '#003366' }} />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold text-gray-900">Заявка от шеф-повара</h3>
+                                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                  <Calendar className="w-4 h-4" />
+                                  {order.createdAt.toLocaleDateString('ru-RU', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="ml-16 space-y-2">
+                              <div className="flex items-center gap-4 text-sm">
+                                <span className="text-gray-600">Филиал:</span>
+                                <span className="font-bold text-gray-900">{branchNames[order.branch]}</span>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm">
+                                <span className="text-gray-600">Позиций:</span>
+                                <span className="font-bold" style={{ color: '#003366' }}>
+                                  {order.products.filter(p => p.quantity > 0).length}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <StatusBadge status={order.status} />
+                            {total > 0 && (
+                              <div className="mt-2">
+                                <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Общая сумма</p>
+                                <p className="text-xl font-black" style={{ color: '#003366' }}>
+                                  {total.toLocaleString()} <span className="text-sm font-bold text-gray-400">сум</span>
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {checkingOrders.length > 0 && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Заявки на финальную проверку</h3>
+                <div className="space-y-4">
+                  {checkingOrders.map(order => {
+                    const total = calculateTotal(order);
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => onSelectOrder(order.id)}
+                        className="bg-white p-6 rounded-[2.5rem] shadow-md border border-gray-100 transition-all active:scale-[0.99] cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#e3f2fd' }}>
+                                <FileText className="w-6 h-6" style={{ color: '#003366' }} />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold text-gray-900">Заявка после проверки шеф-повара</h3>
+                                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                  <Calendar className="w-4 h-4" />
+                                  {order.createdAt.toLocaleDateString('ru-RU', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                                {order.deliveredAt && (
+                                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                    Доставлено: {order.deliveredAt.toLocaleDateString('ru-RU', {
+                                      day: 'numeric',
+                                      month: 'long',
+                                      year: 'numeric'
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="ml-16 space-y-2">
+                              <div className="flex items-center gap-4 text-sm">
+                                <span className="text-gray-600">Филиал:</span>
+                                <span className="font-bold text-gray-900">{branchNames[order.branch]}</span>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm">
+                                <span className="text-gray-600">Позиций:</span>
+                                <span className="font-bold" style={{ color: '#003366' }}>
+                                  {order.products.filter(p => p.quantity > 0).length}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <StatusBadge status={order.status} />
+                            {total > 0 && (
+                              <div className="mt-2">
+                                <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Общая сумма</p>
+                                <p className="text-xl font-black" style={{ color: '#003366' }}>
+                                  {total.toLocaleString()} <span className="text-sm font-bold text-gray-400">сум</span>
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {incomingOrders.length === 0 && checkingOrders.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-400">Нет заявок</p>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Если передан один заказ - показываем детали
+  const { order, onUpdateOrder, onBackToRoles, branch } = props;
+  const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
   const [localProducts, setLocalProducts] = useState(order.products);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
@@ -28,6 +220,20 @@ export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: F
     unit: 'кг',
     category: '⭕️ Другие'
   });
+
+  // Если статус не требует списка заявок, сразу показываем детали
+  useEffect(() => {
+    if (order.status === 'sent_to_financier' || order.status === 'financier_checking') {
+      setViewMode('list');
+    } else {
+      setViewMode('details');
+    }
+  }, [order.status]);
+
+  // Обновляем localProducts при изменении order
+  useEffect(() => {
+    setLocalProducts(order.products);
+  }, [order.products]);
 
   const startEditing = (product: Product) => {
     setEditingId(product.id);
@@ -76,13 +282,14 @@ export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: F
     } else if (order.status === 'financier_checking') {
       onUpdateOrder({
         ...order,
+        products: localProducts,
         status: 'completed',
       });
       alert('Заказ успешно завершен!');
     }
   };
 
-  const isReadOnly = order.status !== 'sent_to_financier' && order.status !== 'financier_checking';
+  const isReadOnly = order.status !== 'sent_to_financier';
   const isFinalCheck = order.status === 'financier_checking';
 
   const totalAmount = localProducts.reduce((sum, p) => {
@@ -95,37 +302,126 @@ export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: F
   // Group products by category
   const categories = Array.from(new Set(localProducts.map(p => p.category))).sort();
 
+  // Подсчет продуктов с количеством > 0
+  const productsWithQuantity = localProducts.filter(p => p.quantity > 0).length;
+
+  // Если показываем список заявок
+  if (viewMode === 'list' && (order.status === 'sent_to_financier' || order.status === 'financier_checking')) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
+        <header className="text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#003366' }}>
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <button onClick={onBackToRoles} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
+              <h1 className="text-lg font-bold">Финансист</h1>
+            </div>
+            <div className="w-9" />
+          </div>
+
+          <div className="relative z-10">
+            <p className="text-white/80 text-[10px] uppercase font-semibold">Филиал: {branchNames[branch]}</p>
+            <h2 className="text-xl font-bold italic tracking-tight leading-none">
+              {order.status === 'sent_to_financier' ? 'Входящие заявки' : 'Проверка цен поставщика'}
+            </h2>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 -mt-6">
+          <div className="space-y-4 pb-8">
+            <div
+              onClick={() => setViewMode('details')}
+              className="bg-white p-6 rounded-[2.5rem] shadow-md border border-gray-100 transition-all active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {order.status === 'sent_to_financier' ? 'Заявка от шеф-повара' : 'Заявка от поставщика'}
+                      </h3>
+                      <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                        <Calendar className="w-4 h-4" />
+                        {order.createdAt.toLocaleDateString('ru-RU', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-16 space-y-2">
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-gray-600">Позиций:</span>
+                      <span className="font-bold text-blue-600">{productsWithQuantity}</span>
+                    </div>
+                    {totalAmount > 0 && (
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-gray-600">Сумма:</span>
+                        <span className="font-bold text-gray-900">{totalAmount.toLocaleString()} сум</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <StatusBadge status={order.status} />
+              </div>
+              <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Нажмите для детального просмотра</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Если показываем детали заявки
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col">
-      <header className="bg-blue-600 text-white p-6 pb-8 rounded-b-[3rem] shadow-xl relative overflow-hidden">
-        {/* Pattern overlay */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-
-        <div className="flex items-center justify-between mb-4 relative z-10">
-          <button onClick={onBackToRoles} className="p-2 hover:bg-white/20 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6" />
+      <header className="text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#003366' }}>
+        <div className="flex items-center justify-between mb-2 relative z-10">
+          <button
+            onClick={() => {
+              if (order.status === 'sent_to_financier' || order.status === 'financier_checking') {
+                setViewMode('list');
+              } else {
+                onBackToRoles();
+              }
+            }}
+            className="p-2 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <Wallet className="w-5 h-5" />
-            </div>
-            <h1 className="text-xl font-bold">Финансист</h1>
+            <Wallet className="w-4 h-4" />
+            <h1 className="text-lg font-bold">Финансист</h1>
           </div>
           {!isReadOnly && (
             <button
               onClick={() => setIsAdding(true)}
               className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
             >
-              <Plus className="w-6 h-6" />
+              <Plus className="w-5 h-5" />
             </button>
           )}
         </div>
 
-        <div className="relative z-10">
-          <p className="text-white/80 text-sm mb-1 uppercase tracking-wider font-semibold">Филиал: {branchNames[branch]}</p>
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black italic tracking-tight">Неделя {order.weekNumber}</h2>
+        <div className="relative z-10 flex items-end justify-between">
+          <div>
+            <p className="text-white/80 text-[10px] uppercase font-semibold leading-none mb-1">Филиал: {branchNames[branch]}</p>
+            <h2 className="text-xl font-bold italic tracking-tight leading-none">
+              {order.createdAt.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'short'
+              })}
+            </h2>
+          </div>
+          <div className="text-right">
             <StatusBadge status={order.status} />
           </div>
         </div>
@@ -134,7 +430,7 @@ export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: F
       <main className="flex-1 p-4 -mt-6">
         <div className="space-y-8 pb-32">
           {categories.map(category => {
-            const categoryProducts = localProducts.filter(p => p.category === category);
+            const categoryProducts = localProducts.filter(p => p.category === category && p.quantity > 0);
             if (categoryProducts.length === 0) return null;
 
             return (
@@ -144,7 +440,7 @@ export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: F
                 </h3>
                 <div className="space-y-3">
                   {categoryProducts.map(product => (
-                    <div key={product.id} className="bg-white p-5 rounded-[2.5rem] shadow-md border border-gray-100 transition-all active:scale-[0.99]">
+                    <div key={product.id} className="bg-white p-5 rounded-[2.5rem] shadow-md border border-gray-100">
                       {editingId === product.id && editProduct ? (
                         <div className="space-y-4">
                           <input
@@ -210,17 +506,34 @@ export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: F
                             <div className="flex-1">
                               <h4 className="font-bold text-gray-900 text-lg leading-tight mb-2 pr-2">{product.name}</h4>
                               <div className="flex items-center gap-4">
+                                {product.checked && (
+                                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Check className="w-3 h-3 text-white" />
+                                  </div>
+                                )}
                                 <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm font-bold">
                                   {product.quantity} {product.unit}
                                 </span>
                                 {product.price && (
                                   <span className="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-sm font-bold">
-                                    {product.price.toLocaleString()} сум
+                                    {product.price.toLocaleString()} сум / {product.unit}
                                   </span>
                                 )}
                               </div>
+                              {product.comment && (
+                                <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 p-2 rounded-lg mt-2">
+                                  <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                                  <p><b>Поставщик:</b> {product.comment}</p>
+                                </div>
+                              )}
+                              {product.chefComment && (
+                                <div className="flex items-start gap-2 text-xs text-green-600 bg-green-50 p-2 rounded-lg mt-2">
+                                  <Check className="w-3 h-3 mt-0.5 shrink-0" />
+                                  <p><b>Шеф-повар:</b> {product.chefComment}</p>
+                                </div>
+                              )}
                             </div>
-                            {!isReadOnly && (
+                            {!isReadOnly && !isFinalCheck && (
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => startEditing(product)}
@@ -239,7 +552,7 @@ export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: F
                           </div>
                           {product.price && product.quantity > 0 && (
                             <div className="mt-4 pt-4 border-t border-dashed border-gray-100 flex justify-between items-center">
-                              <span className="text-gray-400 text-xs font-bold uppercase">Итого:</span>
+                              <span className="text-gray-400 text-xs font-bold uppercase">Общая стоимость:</span>
                               <span className="text-lg font-black text-gray-900">
                                 {(product.price * product.quantity).toLocaleString()} сум
                               </span>
@@ -260,30 +573,31 @@ export function FinancierView({ order, onUpdateOrder, onBackToRoles, branch }: F
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 p-6 space-y-4 rounded-t-[2.5rem] shadow-2xl z-20">
         <div className="flex items-center justify-between px-2">
           <div>
-            <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-1">Общая сумма</p>
+            <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-1">Итоговая сумма</p>
             <p className="text-3xl font-black text-gray-900 leading-none">
               {totalAmount.toLocaleString()} <span className="text-sm font-bold text-gray-400 uppercase ml-1">сум</span>
             </p>
           </div>
           <div className="text-right">
             <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-1">Позиций</p>
-            <p className="text-xl font-black text-blue-600 leading-none">{localProducts.length}</p>
+            <p className="text-xl font-black text-blue-600 leading-none">{productsWithQuantity}</p>
           </div>
         </div>
 
-        {!isReadOnly && (
+        {(order.status === 'sent_to_financier' || order.status === 'financier_checking') && (
           <button
             onClick={handleSend}
             disabled={localProducts.length === 0}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-3xl shadow-xl shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-3 text-lg disabled:opacity-50"
+            className="w-full text-white font-bold py-5 rounded-3xl shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 text-lg disabled:opacity-50 hover:opacity-90"
+            style={{ backgroundColor: '#003366', boxShadow: '0 20px 25px -5px rgba(0, 51, 102, 0.3)' }}
           >
             <Send className="w-5 h-5" />
-            {order.status === 'sent_to_financier' ? 'Утвердить и отправить поставщику' : 'Завершить заказ'}
+            {order.status === 'sent_to_financier' ? 'Утвердить и отправить поставщику' : 'Завершить заказ и закрыть заявку'}
           </button>
         )}
-        {isReadOnly && (
+        {order.status !== 'sent_to_financier' && order.status !== 'financier_checking' && (
           <div className="text-center p-3 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-            <p className="text-gray-500 text-sm font-medium">Редактирование в данном статусе недоступно</p>
+            <p className="text-gray-500 text-sm font-medium">Заявка находится в статусе "{order.status}"</p>
           </div>
         )}
       </div>
