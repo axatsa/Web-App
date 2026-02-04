@@ -132,9 +132,17 @@ export default function App() {
       return (
         <FinancierView
           order={selectedOrder}
-          onUpdateOrder={(updatedOrder: Order) => {
+          onUpdateOrder={async (updatedOrder: Order) => {
+            // Optimistic update
             setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
             setSelectedOrderId(null);
+
+            // Save to Supabase
+            const { error } = await supabase.from('orders').upsert(updatedOrder);
+            if (error) {
+              console.error('Error saving order (Financier):', error);
+              alert('Ошибка сохранения! Проверьте интернет.');
+            }
           }}
           onBackToRoles={() => setSelectedOrderId(null)}
           branch={selectedOrder.branch}
@@ -161,9 +169,17 @@ export default function App() {
       return (
         <SupplierView
           order={selectedOrder}
-          onUpdateOrder={(updatedOrder: Order) => {
+          onUpdateOrder={async (updatedOrder: Order) => {
+            // Optimistic update
             setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
             setSelectedOrderId(null);
+
+            // Save to Supabase
+            const { error } = await supabase.from('orders').upsert(updatedOrder);
+            if (error) {
+              console.error('Error saving order (Supplier):', error);
+              alert('Ошибка сохранения! Проверьте интернет.');
+            }
           }}
           onBackToRoles={() => setSelectedOrderId(null)}
           branch={selectedOrder.branch}
