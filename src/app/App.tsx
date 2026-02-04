@@ -114,6 +114,42 @@ export default function App() {
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
+  const saveOrder = async (updatedOrder: Order) => {
+    // 1. Optimistic Update (Update local state immediately)
+    setOrders(prev => {
+      const existing = prev.find(o => o.id === updatedOrder.id);
+      if (existing) {
+        return prev.map(o => o.id === updatedOrder.id ? updatedOrder : o);
+      }
+      return [...prev, updatedOrder];
+    });
+
+    // Close detail view if open
+    setSelectedOrderId(null);
+    setSelectedBranch(null);
+
+    console.log('💾 Saving order to Supabase:', updatedOrder);
+
+    // 2. Prepare payload for Supabase (sanitize Dates)
+    const payload = {
+      ...updatedOrder,
+      createdAt: updatedOrder.createdAt.toISOString(), // Ensure ISO string
+      deliveredAt: updatedOrder.deliveredAt ? updatedOrder.deliveredAt.toISOString() : null,
+    };
+
+    // 3. Send to Supabase
+    const { error } = await supabase.from('orders').upsert(payload);
+
+    if (error) {
+      console.error('❌ Error saving order to Supabase:', error);
+      alert(`Ошибка сохранения! Данные не отправлены.\nОшибка: ${error.message}`);
+      // Revert optimistic update? For now, just warn.
+      loadOrders(); // Reload actual data to revert
+    } else {
+      console.log('✅ Order saved successfully!');
+    }
+  };
+
   // Если роль не выбрана, показываем выбор роли
   if (!selectedRole) {
     return (
@@ -132,18 +168,7 @@ export default function App() {
       return (
         <FinancierView
           order={selectedOrder}
-          onUpdateOrder={async (updatedOrder: Order) => {
-            // Optimistic update
-            setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-            setSelectedOrderId(null);
-
-            // Save to Supabase
-            const { error } = await supabase.from('orders').upsert(updatedOrder);
-            if (error) {
-              console.error('Error saving order (Financier):', error);
-              alert('Ошибка сохранения! Проверьте интернет.');
-            }
-          }}
+          onUpdateOrder={saveOrder}
           onBackToRoles={() => setSelectedOrderId(null)}
           branch={selectedOrder.branch}
           onRefresh={loadOrders}
@@ -169,18 +194,7 @@ export default function App() {
       return (
         <SupplierView
           order={selectedOrder}
-          onUpdateOrder={async (updatedOrder: Order) => {
-            // Optimistic update
-            setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-            setSelectedOrderId(null);
-
-            // Save to Supabase
-            const { error } = await supabase.from('orders').upsert(updatedOrder);
-            if (error) {
-              console.error('Error saving order (Supplier):', error);
-              alert('Ошибка сохранения! Проверьте интернет.');
-            }
-          }}
+          onUpdateOrder={saveOrder}
           onBackToRoles={() => setSelectedOrderId(null)}
           branch={selectedOrder.branch}
           onRefresh={loadOrders}
@@ -253,31 +267,13 @@ export default function App() {
     setSelectedBranch(null);
   };
 
-  const handleUpdateOrder = async (updatedOrder: Order) => {
-    // Optimistic update
-    const existingIndex = orders.findIndex(o => o.id === updatedOrder.id);
-    if (existingIndex >= 0) {
-      setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
-    } else {
-      setOrders(prev => [...prev, updatedOrder]);
-    }
-    setSelectedBranch(null);
-
-    // Save to Supabase
-    const { error } = await supabase.from('orders').upsert(updatedOrder);
-    if (error) {
-      console.error('Error saving order:', error);
-      alert('Ошибка при сохранении! Проверьте интернет.');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
       {selectedRole === 'chef' && (
         <ChefView
           order={currentOrder}
-          onUpdateOrder={handleUpdateOrder}
-          onBackToRoles={handleBack}
+          onUpdateOrder={saveOrder}
+          onBackToRoles={() => setSelectedBranch(null)}
           branch={selectedBranch}
           onRefresh={loadOrders}
         />
