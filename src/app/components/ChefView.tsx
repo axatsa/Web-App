@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, ChefHat, MessageSquare, Check, Trash2, Plus, RefreshCcw } from 'lucide-react';
+import { ArrowLeft, Send, ChefHat, MessageSquare, Check, Trash2, Plus, RefreshCcw, Calendar } from 'lucide-react';
 import type { Order, Branch } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
 
@@ -102,6 +102,15 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
                 month: 'short'
               })}
             </h2>
+            {order.estimatedDeliveryDate && (
+              <p className="text-white/90 text-xs font-bold mt-1 flex items-center gap-1 bg-white/10 px-2 py-1 rounded-lg w-fit">
+                <Calendar className="w-3 h-3" />
+                Ожидаемая доставка: {order.estimatedDeliveryDate.toLocaleDateString('ru-RU', {
+                  day: 'numeric',
+                  month: 'long'
+                })}
+              </p>
+            )}
           </div>
           <StatusBadge status={order.status} />
         </div>

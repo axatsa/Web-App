@@ -58,6 +58,7 @@ export type Order = {
   products: Product[];
   createdAt: Date;
   deliveredAt?: Date; // Дата доставки (устанавливается при доставке)
+  estimatedDeliveryDate?: Date; // Ориентировочная дата доставки (от поставщика)
   branch: Branch; // Филиал, из которого пришла заявка
 };
 
@@ -89,6 +90,7 @@ export default function App() {
         ...o,
         createdAt: new Date(o.createdAt),
         deliveredAt: o.deliveredAt ? new Date(o.deliveredAt) : undefined,
+        estimatedDeliveryDate: o.estimatedDeliveryDate ? new Date(o.estimatedDeliveryDate) : undefined,
       }));
       setOrders(parsedData);
     }
@@ -135,6 +137,7 @@ export default function App() {
       ...updatedOrder,
       createdAt: updatedOrder.createdAt.toISOString(), // Ensure ISO string
       deliveredAt: updatedOrder.deliveredAt ? updatedOrder.deliveredAt.toISOString() : null,
+      estimatedDeliveryDate: updatedOrder.estimatedDeliveryDate ? updatedOrder.estimatedDeliveryDate.toISOString() : null,
     };
 
     // 3. Send to Supabase

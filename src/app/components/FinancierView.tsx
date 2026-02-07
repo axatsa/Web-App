@@ -175,6 +175,16 @@ export function FinancierView(props: FinancierViewProps) {
                                     })}
                                   </p>
                                 )}
+                                {order.estimatedDeliveryDate && (
+                                  <p className="text-xs text-orange-600 font-bold flex items-center gap-1 mt-1">
+                                    <Calendar className="w-3 h-3" />
+                                    Ожидаемая доставка: {order.estimatedDeliveryDate.toLocaleDateString('ru-RU', {
+                                      day: 'numeric',
+                                      month: 'long',
+                                      year: 'numeric'
+                                    })}
+                                  </p>
+                                )}
                               </div>
                             </div>
                             <div className="ml-16 space-y-2">
@@ -215,8 +225,8 @@ export function FinancierView(props: FinancierViewProps) {
               </div>
             )}
           </div>
-        </main>
-      </div>
+        </main >
+      </div >
     );
   }
 
@@ -501,6 +511,15 @@ export function FinancierView(props: FinancierViewProps) {
                 month: 'short'
               })}
             </h2>
+            {order.estimatedDeliveryDate && (
+              <p className="text-white/90 text-xs font-bold mt-1 flex items-center gap-1 bg-white/10 px-2 py-1 rounded-lg w-fit">
+                <Calendar className="w-3 h-3" />
+                Ожидаемая доставка: {order.estimatedDeliveryDate.toLocaleDateString('ru-RU', {
+                  day: 'numeric',
+                  month: 'long'
+                })}
+              </p>
+            )}
           </div>
           <div className="text-right">
             <StatusBadge status={order.status} />

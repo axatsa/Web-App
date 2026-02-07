@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, MessageSquare, Truck, Check, RefreshCcw, AlignJustify, LayoutGrid, Download } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquare, Truck, Check, RefreshCcw, AlignJustify, LayoutGrid, Download, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import type { Order, Branch } from '@/app/App';
@@ -115,6 +115,9 @@ export function SupplierView(props: SupplierViewProps) {
   const { order, onUpdateOrder, onBackToRoles, branch } = props;
   const [localProducts, setLocalProducts] = useState(order.products);
   const [isCompact, setIsCompact] = useState(false);
+  const [estimatedDate, setEstimatedDate] = useState<string>(
+    order.estimatedDeliveryDate ? order.estimatedDeliveryDate.toISOString().split('T')[0] : ''
+  );
 
   // Синхронизация localProducts при изменении order.products
   useEffect(() => {
@@ -142,11 +145,7 @@ export function SupplierView(props: SupplierViewProps) {
       ...order,
       products: localProducts,
       status: 'chef_checking',
-    });
-    onUpdateOrder({
-      ...order,
-      products: localProducts,
-      status: 'chef_checking',
+      estimatedDeliveryDate: estimatedDate ? new Date(estimatedDate) : undefined,
     });
     alert('Заявка заполнена и отправлена шеф-повару на проверку');
   };
@@ -371,6 +370,21 @@ export function SupplierView(props: SupplierViewProps) {
               {totalAmount.toLocaleString()}
             </p>
             <span className="text-xs font-bold text-gray-400 uppercase">сум</span>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="relative">
+              <input
+                type="date"
+                value={estimatedDate}
+                onChange={(e) => setEstimatedDate(e.target.value)}
+                className="bg-gray-100 border-none rounded-xl px-3 py-2 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-orange-500 outline-none"
+              />
+              {!estimatedDate && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs">
+                  Дата доставки
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
