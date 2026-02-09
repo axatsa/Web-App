@@ -99,24 +99,6 @@ export function FinancierView(props: FinancierViewProps) {
             </div>
           </div>
 
-          {/* Branch Filter */}
-          <div className="relative z-10 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            <button
-              onClick={() => setBranchFilter('all')}
-              className={`flex-none px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${branchFilter === 'all' ? 'bg-white text-[#003366] border-white' : 'bg-transparent text-white/80 border-white/20'}`}
-            >
-              {t('allBranches')}
-            </button>
-            {(['chilanzar', 'uchtepa', 'shayzantaur', 'olmazar'] as Branch[]).map(b => (
-              <button
-                key={b}
-                onClick={() => setBranchFilter(b)}
-                className={`flex-none px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${branchFilter === b ? 'bg-white text-[#003366] border-white' : 'bg-transparent text-white/80 border-white/20'}`}
-              >
-                {t(`branch${b.charAt(0).toUpperCase() + b.slice(1)}` as any)}
-              </button>
-            ))}
-          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 -mt-6 pb-[120px]">

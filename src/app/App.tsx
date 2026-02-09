@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -71,16 +72,33 @@ export default function App() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
 
+  // Добавляем флаг "из бота"
+  const [isFromBot, setIsFromBot] = useState(false);
+
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (tg) {
       tg.ready();
       tg.expand();
     }
+
+    // Detect role and branch from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const role = urlParams.get('role') as Role | null;
+    const branch = urlParams.get('branch') as Branch | 'all' | null;
+
+    if (role) {
+      console.log('🔗 Detected role from URL:', role);
+      setSelectedRole(role);
+      setIsFromBot(true);
+    }
+    if (branch && branch !== 'all') {
+      console.log('🔗 Detected branch from URL:', branch);
+      setSelectedBranch(branch as Branch);
+    }
   }, []);
 
   const [orders, setOrders] = useState<Order[]>([]);
-
   // Load orders from Supabase
   const loadOrders = async () => {
     const { data, error } = await supabase.from('orders').select('*');
@@ -104,7 +122,7 @@ export default function App() {
     // Subscribe to changes (Real-time updates!)
     const subscription = supabase
       .channel('orders_channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload: any) => {
         console.log('🔄 Realtime update received:', payload);
         // Reload all orders to be safe or handle delta
         loadOrders();
@@ -155,7 +173,31 @@ export default function App() {
     }
   };
 
-  // Если роль не выбрана, показываем выбор роли
+  const handleBackToStart = () => {
+    if (!isFromBot) {
+      setSelectedRole(null);
+      setSelectedBranch(null);
+      setSelectedOrderId(null);
+    }
+  };
+
+  // Если открыли НЕ через бота и нет выбранной роли - показываем сообщение об ошибке (или селектор, если хотим оставить)
+  // Но пользователь сказал "в мини апп это можно убрать", так что сделаем заглушку
+  if (!selectedRole && isFromBot) {
+    return (
+      <div className="h-screen flex items-center justify-center p-8 text-center bg-gray-50">
+        <div className="bg-white p-8 rounded-3xl shadow-xl">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="w-8 h-8 text-red-500" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Доступ ограничен</h1>
+          <p className="text-gray-500">Пожалуйста, откройте приложение через меню вашего Telegram бота.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Если роль не выбрана (и мы не в режиме "из бота"), показываем выбор роли
   if (!selectedRole) {
     return (
       <RoleSelector
@@ -185,7 +227,7 @@ export default function App() {
       <FinancierView
         orders={orders}
         onSelectOrder={setSelectedOrderId}
-        onBackToRoles={() => setSelectedRole(null)}
+        onBackToRoles={handleBackToStart}
         onRefresh={loadOrders}
       />
     );
@@ -211,7 +253,7 @@ export default function App() {
       <SupplierView
         orders={orders}
         onSelectOrder={setSelectedOrderId}
-        onBackToRoles={() => setSelectedRole(null)}
+        onBackToRoles={handleBackToStart}
         onRefresh={loadOrders}
       />
     );
@@ -252,7 +294,7 @@ export default function App() {
 
   if (!currentOrder) {
     // Создаем новую заявку с базовым списком продуктов
-    const baseProducts = MASTER_PRODUCT_LIST.map(p => ({
+    const baseProducts = MASTER_PRODUCT_LIST.map((p: any) => ({
       ...p,
       quantity: 0,
       price: undefined,

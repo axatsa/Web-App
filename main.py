@@ -180,6 +180,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         role_key = f"role_{user['role']}"
         branch_key = f"branch_{user['branch']}"
         
+        # Build message
+        if user['role'] == 'financier':
+            msg = f"👋 {get_text(lang, 'already_registered').split(',')[0]}, {user['full_name']}!\n\n🎭 {get_text(lang, 'role')}: {get_text(lang, role_key)}"
+        else:
+            msg = get_text(lang, 'already_registered',
+                name=user['full_name'],
+                role=get_text(lang, role_key),
+                branch=get_text(lang, branch_key)
+            )
+
         # Show welcome back message with app button
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton(
@@ -192,14 +202,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             )]
         ])
         
-        await update.message.reply_text(
-            get_text(lang, 'already_registered',
-                name=user['full_name'],
-                role=get_text(lang, role_key),
-                branch=get_text(lang, branch_key)
-            ),
-            reply_markup=keyboard
-        )
+        await update.message.reply_text(msg, reply_markup=keyboard)
         return ConversationHandler.END
     
     # Start registration - show language selection
@@ -316,6 +319,37 @@ async def password_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text(get_text(lang, 'wrong_password'))
         return PASSWORD
     
+    # If financier, skip branch selection
+    if role == 'financier':
+        branch = 'all'
+        context.user_data['branch'] = branch
+        telegram_id = update.effective_user.id
+        full_name = context.user_data.get('full_name')
+        
+        # Save to database
+        save_user(telegram_id, full_name, role, branch, lang)
+        
+        role_name = get_text(lang, f'role_{role}')
+        
+        # Show completion message with app button
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(
+                get_text(lang, 'open_app'),
+                web_app={'url': f"{WEBAPP_URL}?user_id={telegram_id}&lang={lang}&role={role}&branch={branch}"}
+            )],
+            [InlineKeyboardButton(
+                get_text(lang, 'settings'),
+                callback_data='settings'
+            )]
+        ])
+        
+        await update.message.reply_text(
+            f"✅ {get_text(lang, 'registration_complete').split('!')[0]}!\n\n👤 {full_name}\n🎭 {role_name}",
+            reply_markup=keyboard
+        )
+        
+        return ConversationHandler.END
+
     # Show branch selection
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(get_text(lang, 'branch_chilanzar'), callback_data='branch_chilanzar')],
@@ -388,13 +422,18 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     user = get_user_by_telegram_id(telegram_id)
     lang = user.get('language', 'ru') if user else 'ru'
     
-    keyboard = InlineKeyboardMarkup([
+    buttons = [
         [InlineKeyboardButton(get_text(lang, 'change_language'), callback_data='setting_language')],
         [InlineKeyboardButton(get_text(lang, 'change_fio'), callback_data='setting_fio')],
         [InlineKeyboardButton(get_text(lang, 'change_role'), callback_data='setting_role')],
-        [InlineKeyboardButton(get_text(lang, 'change_branch'), callback_data='setting_branch')],
-        [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_main')],
-    ])
+    ]
+    
+    if user and user.get('role') != 'financier':
+        buttons.append([InlineKeyboardButton(get_text(lang, 'change_branch'), callback_data='setting_branch')])
+    
+    buttons.append([InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_main')])
+    
+    keyboard = InlineKeyboardMarkup(buttons)
     
     await query.edit_message_text(
         get_text(lang, 'settings_menu'),
