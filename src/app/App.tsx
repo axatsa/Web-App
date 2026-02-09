@@ -13,6 +13,7 @@ import { FinancierView } from '@/app/components/FinancierView';
 import { SupplierView } from '@/app/components/SupplierView';
 import { RoleSelector } from '@/app/components/RoleSelector';
 import { BranchSelector } from '@/app/components/BranchSelector';
+import { LanguageProvider, useLanguage } from '@/app/context/LanguageContext';
 
 export type Role = 'chef' | 'financier' | 'supplier';
 
@@ -66,6 +67,7 @@ import { supabase } from '@/lib/supabase';
 import { MASTER_PRODUCT_LIST } from '@/data/products';
 
 export default function App() {
+  const { t } = useLanguage();
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
 
@@ -223,7 +225,7 @@ export default function App() {
       const firstDelivery = deliveryOrders[0];
       setSelectedBranch(firstDelivery.branch);
     } else {
-      alert('Пока ничего не привезли. Новых доставок для проверки нет.');
+      alert(t('alertNoDeliveries'));
       loadOrders(); // Попробуем обновить данные
     }
   };

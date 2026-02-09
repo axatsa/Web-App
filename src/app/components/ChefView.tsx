@@ -2,13 +2,9 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Send, ChefHat, MessageSquare, Check, Trash2, Plus, RefreshCcw, Calendar } from 'lucide-react';
 import type { Order, Branch } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
+import { useLanguage } from '@/app/context/LanguageContext';
 
-const branchNames: Record<Branch, string> = {
-  chilanzar: 'Чиланзар (Новза)',
-  uchtepa: 'Учтепа',
-  shayzantaur: 'Шайзантаур',
-  olmazar: 'Олмазар',
-};
+// Localized branch names handled by t() key 'branch' + id
 
 type ChefViewProps = {
   order: Order;
@@ -19,6 +15,7 @@ type ChefViewProps = {
 };
 
 export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefresh }: ChefViewProps) {
+  const { t } = useLanguage();
   const [localProducts, setLocalProducts] = useState(order.products);
 
   // Синхронизация localProducts при изменении order.products
@@ -39,7 +36,7 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
       // Валидация: проверяем, что хотя бы один продукт имеет quantity > 0
       const hasProducts = localProducts.some(p => p.quantity > 0);
       if (!hasProducts) {
-        alert('Пожалуйста, укажите количество хотя бы для одного продукта');
+        alert(t('alertNoProducts'));
         return;
       }
 
@@ -48,14 +45,14 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
         products: localProducts,
         status: 'sent_to_financier',
       });
-      alert('Список продуктов отправлен финансисту');
+      alert(t('alertListSent'));
     } else if (order.status === 'chef_checking') {
       onUpdateOrder({
         ...order,
         products: localProducts,
         status: 'financier_checking',
       });
-      alert('Проверка завершена. Отправлено финансисту на финальную проверку');
+      alert(t('alertCheckComplete'));
     }
   };
 
@@ -79,7 +76,7 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
           </button>
           <div className="flex items-center gap-2">
             <ChefHat className="w-4 h-4" />
-            <h1 className="text-lg font-bold">Шеф-повар</h1>
+            <h1 className="text-lg font-bold">{t('chefTitle')}</h1>
           </div>
           {onRefresh ? (
             <button
@@ -95,9 +92,9 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
 
         <div className="relative z-10 flex items-end justify-between">
           <div>
-            <p className="text-white/80 text-[10px] uppercase font-semibold">Филиал: {branchNames[branch]}</p>
+            <p className="text-white/80 text-[10px] uppercase font-semibold">{t('branch')}: {t(`branch${branch.charAt(0).toUpperCase() + branch.slice(1)}` as any)}</p>
             <h2 className="text-xl font-bold italic tracking-tight leading-none">
-              {order.createdAt.toLocaleDateString('ru-RU', {
+              {order.createdAt.toLocaleDateString(t('back') === 'Orqaga' ? 'uz-UZ' : 'ru-RU', {
                 day: 'numeric',
                 month: 'short'
               })}
@@ -105,7 +102,7 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
             {order.estimatedDeliveryDate && (
               <p className="text-white/90 text-xs font-bold mt-1 flex items-center gap-1 bg-white/10 px-2 py-1 rounded-lg w-fit">
                 <Calendar className="w-3 h-3" />
-                Ожидаемая доставка: {order.estimatedDeliveryDate.toLocaleDateString('ru-RU', {
+                {t('estimatedDelivery')}: {order.estimatedDeliveryDate.toLocaleDateString(t('back') === 'Orqaga' ? 'uz-UZ' : 'ru-RU', {
                   day: 'numeric',
                   month: 'long'
                 })}
@@ -150,20 +147,20 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
                             <div className="flex flex-wrap gap-2 mt-2">
                               {product.price && (
                                 <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
-                                  Цена: {product.price.toLocaleString()} сум
+                                  {t('price')}: {product.price.toLocaleString()} {t('sum')}
                                 </span>
                               )}
                               {product.comment && (
                                 <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 p-2 rounded-xl border border-blue-100 w-full">
                                   <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                                  <p><b>Поставщик:</b> {product.comment}</p>
+                                  <p><b>{t('supplier')}:</b> {product.comment}</p>
                                 </div>
                               )}
                             </div>
                           )}
                           {isCheckingMode && (
                             <textarea
-                              placeholder="Ваш комментарий по доставке..."
+                              placeholder={t('deliveryComment')}
                               value={product.chefComment || ''}
                               onChange={(e) => handleUpdateProduct(product.id, 'chefComment', e.target.value)}
                               rows={1}
@@ -201,7 +198,7 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center gap-4 rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-20">
         <div className="flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-gray-400 text-[10px] uppercase font-black tracking-widest">Позиций:</span>
+            <span className="text-gray-400 text-[10px] uppercase font-black tracking-widest">{t('positions')}:</span>
             <span className="text-2xl font-black text-gray-900 leading-none">
               {localProducts.filter(p => p.quantity > 0).length}
             </span>
@@ -215,12 +212,12 @@ export function ChefView({ order, onUpdateOrder, onBackToRoles, branch, onRefres
               className="bg-[#8B0000] text-white font-bold py-3 px-6 rounded-2xl shadow-lg shadow-red-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm hover:opacity-90"
             >
               <Send className="w-4 h-4" />
-              {order.status === 'sent_to_chef' ? 'Отправить' : 'Завершить'}
+              {order.status === 'sent_to_chef' ? t('send') : t('finishCheck')}
             </button>
           )}
           {isReadOnly && (
             <div className="px-4 py-2 bg-gray-100 rounded-xl border border-gray-200">
-              <p className="text-gray-500 text-xs font-bold">Только чтение</p>
+              <p className="text-gray-500 text-xs font-bold">{t('readOnly')}</p>
             </div>
           )}
         </div>

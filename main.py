@@ -1,0 +1,442 @@
+# Telegram Bot for Optimizer Mini App
+# Registration flow with language, FIO, role, password, and branch selection
+
+import os
+import logging
+from typing import Optional
+from dotenv import load_dotenv
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    ConversationHandler,
+    ContextTypes,
+    filters,
+)
+from supabase import create_client, Client
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Environment variables
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://usatbokjphhscygveqsv.supabase.co')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+WEBAPP_URL = os.getenv('WEBAPP_URL', 'https://your-webapp-url.com')
+
+# Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_KEY else None
+
+# Conversation states
+LANGUAGE, FIO, ROLE, PASSWORD, BRANCH = range(5)
+
+# Role passwords
+ROLE_PASSWORDS = {
+    'chef': 'P123',
+    'financier': 'F123',
+    'supplier': 'C123',
+}
+
+# Translations
+TEXTS = {
+    'ru': {
+        'welcome': '👋 Добро пожаловать в Optimizer!\n\nВыберите язык:',
+        'enter_fio': '📝 Введите ваше ФИО (Фамилия Имя Отчество):',
+        'select_role': '👤 Выберите вашу роль:',
+        'enter_password': '🔐 Введите пароль для роли "{role}":',
+        'wrong_password': '❌ Неверный пароль. Попробуйте ещё раз:',
+        'select_branch': '🏢 Выберите филиал:',
+        'registration_complete': '✅ Отлично! Регистрация завершена.\n\n👤 {name}\n🎭 Роль: {role}\n🏢 Филиал: {branch}\n\nНажмите кнопку ниже, чтобы открыть приложение:',
+        'open_app': '📱 Открыть Optimizer',
+        'back': '⬅️ Назад',
+        'settings': '⚙️ Настройки',
+        'settings_menu': '⚙️ Настройки\n\nВыберите, что хотите изменить:',
+        'change_language': '🌐 Сменить язык',
+        'change_fio': '📝 Изменить ФИО',
+        'change_role': '👤 Сменить роль',
+        'change_branch': '🏢 Сменить филиал',
+        'language_changed': '✅ Язык изменён на Русский',
+        'fio_changed': '✅ ФИО изменено на: {name}',
+        'role_changed': '✅ Роль изменена на: {role}',
+        'branch_changed': '✅ Филиал изменён на: {branch}',
+        'already_registered': '👋 С возвращением, {name}!\n\n🎭 Роль: {role}\n🏢 Филиал: {branch}\n\nНажмите кнопку ниже, чтобы открыть приложение:',
+        # Roles
+        'role_chef': '👨‍🍳 Шеф-повар',
+        'role_financier': '💼 Финансист',
+        'role_supplier': '🚚 Поставщик',
+        # Branches
+        'branch_chilanzar': 'Чиланзар (Новза)',
+        'branch_uchtepa': 'Учтепа',
+        'branch_shayzantaur': 'Шайзантаур',
+        'branch_olmazar': 'Олмазар',
+    },
+    'uz': {
+        'welcome': "👋 Optimizer'ga xush kelibsiz!\n\nTilni tanlang:",
+        'enter_fio': "📝 F.I.O. (Familiya Ism Otasining ismi) kiriting:",
+        'select_role': '👤 Rolingizni tanlang:',
+        'enter_password': '🔐 "{role}" roli uchun parolni kiriting:',
+        'wrong_password': "❌ Noto'g'ri parol. Qayta urinib ko'ring:",
+        'select_branch': '🏢 Filialni tanlang:',
+        'registration_complete': "✅ Ajoyib! Ro'yxatdan o'tish yakunlandi.\n\n👤 {name}\n🎭 Rol: {role}\n🏢 Filial: {branch}\n\nIlovani ochish uchun quyidagi tugmani bosing:",
+        'open_app': "📱 Optimizer'ni ochish",
+        'back': '⬅️ Orqaga',
+        'settings': '⚙️ Sozlamalar',
+        'settings_menu': "⚙️ Sozlamalar\n\nNimani o'zgartirmoqchisiz:",
+        'change_language': "🌐 Tilni o'zgartirish",
+        'change_fio': "📝 F.I.O. o'zgartirish",
+        'change_role': "👤 Rolni o'zgartirish",
+        'change_branch': "🏢 Filialni o'zgartirish",
+        'language_changed': "✅ Til O'zbekchaga o'zgartirildi",
+        'fio_changed': "✅ F.I.O. o'zgartirildi: {name}",
+        'role_changed': "✅ Rol o'zgartirildi: {role}",
+        'branch_changed': "✅ Filial o'zgartirildi: {branch}",
+        'already_registered': "👋 Qaytib kelganingizdan xursandmiz, {name}!\n\n🎭 Rol: {role}\n🏢 Filial: {branch}\n\nIlovani ochish uchun quyidagi tugmani bosing:",
+        # Roles
+        'role_chef': '👨‍🍳 Oshpaz',
+        'role_financier': '💼 Moliyachi',
+        'role_supplier': '🚚 Yetkazuvchi',
+        # Branches
+        'branch_chilanzar': 'Chilonzor (Novza)',
+        'branch_uchtepa': 'Uchtepa',
+        'branch_shayzantaur': 'Shayxontohur',
+        'branch_olmazar': 'Olmazor',
+    }
+}
+
+def get_text(lang: str, key: str, **kwargs) -> str:
+    """Get translated text"""
+    text = TEXTS.get(lang, TEXTS['ru']).get(key, TEXTS['ru'].get(key, key))
+    if kwargs:
+        text = text.format(**kwargs)
+    return text
+
+def get_back_keyboard(lang: str) -> ReplyKeyboardMarkup:
+    """Get keyboard with back button"""
+    return ReplyKeyboardMarkup(
+        [[get_text(lang, 'back')]],
+        resize_keyboard=True,
+        one_time_keyboard=False
+    )
+
+def get_user_by_telegram_id(telegram_id: int) -> Optional[dict]:
+    """Get user from database by telegram ID"""
+    if not supabase:
+        return None
+    try:
+        result = supabase.table('users').select('*').eq('telegram_id', telegram_id).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+    except Exception as e:
+        logger.error(f"Error fetching user: {e}")
+    return None
+
+def save_user(telegram_id: int, full_name: str, role: str, branch: str, language: str) -> bool:
+    """Save or update user in database"""
+    if not supabase:
+        logger.warning("Supabase not configured, skipping save")
+        return True
+    try:
+        # Check if user exists
+        existing = get_user_by_telegram_id(telegram_id)
+        if existing:
+            # Update
+            supabase.table('users').update({
+                'full_name': full_name,
+                'role': role,
+                'branch': branch,
+                'language': language,
+            }).eq('telegram_id', telegram_id).execute()
+        else:
+            # Insert
+            supabase.table('users').insert({
+                'telegram_id': telegram_id,
+                'full_name': full_name,
+                'role': role,
+                'branch': branch,
+                'language': language,
+            }).execute()
+        return True
+    except Exception as e:
+        logger.error(f"Error saving user: {e}")
+        return False
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Start command - check if user exists or start registration"""
+    telegram_id = update.effective_user.id
+    
+    # Check if user already registered
+    user = get_user_by_telegram_id(telegram_id)
+    if user:
+        lang = user.get('language', 'ru')
+        role_key = f"role_{user['role']}"
+        branch_key = f"branch_{user['branch']}"
+        
+        # Show welcome back message with app button
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(
+                get_text(lang, 'open_app'),
+                web_app={'url': f"{WEBAPP_URL}?user_id={telegram_id}&lang={lang}&role={user['role']}&branch={user['branch']}"}
+            )],
+            [InlineKeyboardButton(
+                get_text(lang, 'settings'),
+                callback_data='settings'
+            )]
+        ])
+        
+        await update.message.reply_text(
+            get_text(lang, 'already_registered',
+                name=user['full_name'],
+                role=get_text(lang, role_key),
+                branch=get_text(lang, branch_key)
+            ),
+            reply_markup=keyboard
+        )
+        return ConversationHandler.END
+    
+    # Start registration - show language selection
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton('🇷🇺 Русский', callback_data='lang_ru'),
+            InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data='lang_uz'),
+        ]
+    ])
+    
+    await update.message.reply_text(
+        TEXTS['ru']['welcome'],
+        reply_markup=keyboard
+    )
+    return LANGUAGE
+
+async def language_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle language selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    lang = query.data.replace('lang_', '')
+    context.user_data['language'] = lang
+    
+    # Ask for FIO with back button
+    await query.edit_message_text(get_text(lang, 'enter_fio'))
+    await query.message.reply_text(
+        '⌨️',
+        reply_markup=get_back_keyboard(lang)
+    )
+    
+    return FIO
+
+async def fio_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle FIO input"""
+    lang = context.user_data.get('language', 'ru')
+    text = update.message.text
+    
+    # Check for back button
+    if text == get_text(lang, 'back'):
+        # Go back to language selection
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton('🇷🇺 Русский', callback_data='lang_ru'),
+                InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data='lang_uz'),
+            ]
+        ])
+        await update.message.reply_text(
+            TEXTS['ru']['welcome'],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await update.message.reply_text(
+            '⬆️',
+            reply_markup=keyboard
+        )
+        return LANGUAGE
+    
+    context.user_data['full_name'] = text
+    
+    # Show role selection
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
+        [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
+        [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+    ])
+    
+    await update.message.reply_text(
+        get_text(lang, 'select_role'),
+        reply_markup=keyboard
+    )
+    
+    return ROLE
+
+async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle role selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    lang = context.user_data.get('language', 'ru')
+    role = query.data.replace('role_', '')
+    context.user_data['role'] = role
+    
+    role_name = get_text(lang, f'role_{role}')
+    
+    await query.edit_message_text(
+        get_text(lang, 'enter_password', role=role_name)
+    )
+    
+    return PASSWORD
+
+async def password_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle password input"""
+    lang = context.user_data.get('language', 'ru')
+    text = update.message.text
+    role = context.user_data.get('role')
+    
+    # Check for back button
+    if text == get_text(lang, 'back'):
+        # Go back to role selection
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
+            [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
+            [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+        ])
+        await update.message.reply_text(
+            get_text(lang, 'select_role'),
+            reply_markup=keyboard
+        )
+        return ROLE
+    
+    # Verify password
+    correct_password = ROLE_PASSWORDS.get(role)
+    if text != correct_password:
+        await update.message.reply_text(get_text(lang, 'wrong_password'))
+        return PASSWORD
+    
+    # Show branch selection
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'branch_chilanzar'), callback_data='branch_chilanzar')],
+        [InlineKeyboardButton(get_text(lang, 'branch_uchtepa'), callback_data='branch_uchtepa')],
+        [InlineKeyboardButton(get_text(lang, 'branch_shayzantaur'), callback_data='branch_shayzantaur')],
+        [InlineKeyboardButton(get_text(lang, 'branch_olmazar'), callback_data='branch_olmazar')],
+    ])
+    
+    await update.message.reply_text(
+        get_text(lang, 'select_branch'),
+        reply_markup=keyboard
+    )
+    
+    return BRANCH
+
+async def branch_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle branch selection - complete registration"""
+    query = update.callback_query
+    await query.answer()
+    
+    lang = context.user_data.get('language', 'ru')
+    branch = query.data.replace('branch_', '')
+    context.user_data['branch'] = branch
+    
+    telegram_id = update.effective_user.id
+    full_name = context.user_data.get('full_name')
+    role = context.user_data.get('role')
+    
+    # Save to database
+    save_user(telegram_id, full_name, role, branch, lang)
+    
+    role_name = get_text(lang, f'role_{role}')
+    branch_name = get_text(lang, f'branch_{branch}')
+    
+    # Show completion message with app button
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            get_text(lang, 'open_app'),
+            web_app={'url': f"{WEBAPP_URL}?user_id={telegram_id}&lang={lang}&role={role}&branch={branch}"}
+        )],
+        [InlineKeyboardButton(
+            get_text(lang, 'settings'),
+            callback_data='settings'
+        )]
+    ])
+    
+    await query.edit_message_text(
+        get_text(lang, 'registration_complete',
+            name=full_name,
+            role=role_name,
+            branch=branch_name
+        ),
+        reply_markup=keyboard
+    )
+    
+    # Remove back button keyboard
+    await query.message.reply_text(
+        '✅',
+        reply_markup=ReplyKeyboardRemove()
+    )
+    
+    return ConversationHandler.END
+
+async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show settings menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    telegram_id = update.effective_user.id
+    user = get_user_by_telegram_id(telegram_id)
+    lang = user.get('language', 'ru') if user else 'ru'
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'change_language'), callback_data='setting_language')],
+        [InlineKeyboardButton(get_text(lang, 'change_fio'), callback_data='setting_fio')],
+        [InlineKeyboardButton(get_text(lang, 'change_role'), callback_data='setting_role')],
+        [InlineKeyboardButton(get_text(lang, 'change_branch'), callback_data='setting_branch')],
+        [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_main')],
+    ])
+    
+    await query.edit_message_text(
+        get_text(lang, 'settings_menu'),
+        reply_markup=keyboard
+    )
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Cancel conversation"""
+    await update.message.reply_text(
+        '👋 До свидания!',
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return ConversationHandler.END
+
+def main() -> None:
+    """Start the bot"""
+    if not BOT_TOKEN:
+        logger.error("BOT_TOKEN not set in environment variables!")
+        return
+    
+    # Create application
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Registration conversation handler
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            LANGUAGE: [CallbackQueryHandler(language_selected, pattern='^lang_')],
+            FIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, fio_entered)],
+            ROLE: [CallbackQueryHandler(role_selected, pattern='^role_')],
+            PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, password_entered)],
+            BRANCH: [CallbackQueryHandler(branch_selected, pattern='^branch_')],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+    
+    application.add_handler(conv_handler)
+    application.add_handler(CallbackQueryHandler(settings_menu, pattern='^settings$'))
+    
+    # Start polling
+    logger.info("Bot starting...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == '__main__':
+    main()

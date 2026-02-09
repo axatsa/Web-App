@@ -1,4 +1,5 @@
 import { MapPin, ArrowLeft, Truck, Check, RefreshCcw } from 'lucide-react';
+import { useLanguage } from '@/app/context/LanguageContext';
 import type { Branch } from '@/app/App';
 import thompsonLogo from '@/assets/logo.png';
 
@@ -18,6 +19,7 @@ const branches: { id: Branch; name: string; color: string }[] = [
 ];
 
 export function BranchSelector({ onSelectBranch, onCheckDeliveries, deliveryBranches = [], onBack, onRefresh }: BranchSelectorProps) {
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen bg-white flex flex-col p-6 relative overflow-hidden">
       <div className="flex justify-between items-start mb-6 z-10 relative">
@@ -55,10 +57,10 @@ export function BranchSelector({ onSelectBranch, onCheckDeliveries, deliveryBran
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 text-center mb-2">
-            Выберите филиал
+            {t('selectBranch')}
           </h1>
           <p className="text-gray-500 text-center mb-10 font-medium">
-            С каким филиалом вы работаете?
+            {t('selectBranchDesc')}
           </p>
 
           <div className="space-y-4">
@@ -71,15 +73,15 @@ export function BranchSelector({ onSelectBranch, onCheckDeliveries, deliveryBran
                   <Truck className="w-8 h-8 text-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h2 className="text-xl font-bold text-orange-900 leading-tight">Проверить привоз</h2>
-                  <p className="text-orange-600/70 text-sm font-medium mt-1">Что привезли сегодня?</p>
+                  <h2 className="text-xl font-bold text-orange-900 leading-tight">{t('checkDeliveries')}</h2>
+                  <p className="text-orange-600/70 text-sm font-medium mt-1">{t('checkDeliveriesDesc')}</p>
                 </div>
               </div>
             </button>
 
             <div className="flex items-center gap-4 mb-4">
               <div className="h-px bg-gray-100 flex-1" />
-              <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">Или выберите филиал</span>
+              <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">{t('orSelectBranch')}</span>
               <div className="h-px bg-gray-100 flex-1" />
             </div>
 
@@ -101,10 +103,10 @@ export function BranchSelector({ onSelectBranch, onCheckDeliveries, deliveryBran
                       )}
                     </div>
                     <div className="flex-1 text-left">
-                      <h2 className="text-xl font-bold text-gray-900">{branch.name}</h2>
+                      <h2 className="text-xl font-bold text-gray-900">{t(`branch${branch.id.charAt(0).toUpperCase() + branch.id.slice(1)}` as any)}</h2>
                       {hasDelivery && (
                         <p className="text-green-600 text-[10px] font-bold uppercase tracking-tight mt-1 flex items-center gap-1">
-                          Есть привоз для проверки
+                          {t('hasDelivery')}
                         </p>
                       )}
                     </div>

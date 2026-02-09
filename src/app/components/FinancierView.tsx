@@ -4,6 +4,8 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import type { Order, Product, Unit, Branch } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
+import { useLanguage } from '@/app/context/LanguageContext';
+import { translations } from '@/data/locales';
 
 const branchNames: Record<Branch, string> = {
   chilanzar: 'Чиланзар (Новза)',
@@ -28,13 +30,22 @@ type FinancierViewProps =
   };
 
 export function FinancierView(props: FinancierViewProps) {
+  const { t } = useLanguage();
+
   // Если передан массив заявок - показываем список
   if ('orders' in props) {
     const { orders, onSelectOrder, onBackToRoles, onRefresh } = props;
+    const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
+    const [branchFilter, setBranchFilter] = useState<Branch | 'all'>('all');
 
-    // Фильтруем заявки по статусам
-    const incomingOrders = orders.filter(o => o.status === 'sent_to_financier');
-    const checkingOrders = orders.filter(o => o.status === 'financier_checking');
+    // Фильтруем заявки по статусам и филиалу
+    const filteredByBranch = branchFilter === 'all'
+      ? orders
+      : orders.filter(o => o.branch === branchFilter);
+
+    const incomingOrders = filteredByBranch.filter(o => o.status === 'sent_to_financier');
+    const checkingOrders = filteredByBranch.filter(o => o.status === 'financier_checking');
+    const archiveOrders = filteredByBranch.filter(o => o.status === 'completed');
 
     // Функция для расчета общей суммы заявки
     const calculateTotal = (order: Order) => {
@@ -55,7 +66,7 @@ export function FinancierView(props: FinancierViewProps) {
             </button>
             <div className="flex items-center gap-2">
               <Wallet className="w-4 h-4" />
-              <h1 className="text-lg font-bold">Финансист</h1>
+              <h1 className="text-lg font-bold">{t('financierTitle')}</h1>
             </div>
             {onRefresh ? (
               <button
@@ -69,159 +80,223 @@ export function FinancierView(props: FinancierViewProps) {
             )}
           </div>
 
-          <div className="relative z-10">
-            <h2 className="text-xl font-bold italic tracking-tight leading-none">Все заявки</h2>
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <h2 className="text-xl font-bold italic tracking-tight leading-none">{t('allOrders')}</h2>
+
+            <div className="flex bg-white/10 p-1 rounded-xl backdrop-blur-sm">
+              <button
+                onClick={() => setActiveTab('active')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'active' ? 'bg-white text-[#003366]' : 'text-white/60 hover:text-white'}`}
+              >
+                {t('incomingOrders')}
+              </button>
+              <button
+                onClick={() => setActiveTab('archive')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'archive' ? 'bg-white text-[#003366]' : 'text-white/60 hover:text-white'}`}
+              >
+                {t('archive')}
+              </button>
+            </div>
+          </div>
+
+          {/* Branch Filter */}
+          <div className="relative z-10 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <button
+              onClick={() => setBranchFilter('all')}
+              className={`flex-none px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${branchFilter === 'all' ? 'bg-white text-[#003366] border-white' : 'bg-transparent text-white/80 border-white/20'}`}
+            >
+              {t('allBranches')}
+            </button>
+            {(['chilanzar', 'uchtepa', 'shayzantaur', 'olmazar'] as Branch[]).map(b => (
+              <button
+                key={b}
+                onClick={() => setBranchFilter(b)}
+                className={`flex-none px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${branchFilter === b ? 'bg-white text-[#003366] border-white' : 'bg-transparent text-white/80 border-white/20'}`}
+              >
+                {t(`branch${b.charAt(0).toUpperCase() + b.slice(1)}` as any)}
+              </button>
+            ))}
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 -mt-6 pb-[120px]">
           <div className="space-y-6">
-            {incomingOrders.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Входящие заявки</h3>
-                <div className="space-y-4">
-                  {incomingOrders.map(order => {
-                    const total = calculateTotal(order);
-                    return (
-                      <div
-                        key={order.id}
-                        onClick={() => onSelectOrder(order.id)}
-                        className="bg-white p-6 rounded-[2.5rem] shadow-md border border-gray-100 transition-all active:scale-[0.99] cursor-pointer"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#e3f2fd' }}>
-                                <FileText className="w-6 h-6" style={{ color: '#003366' }} />
+            {activeTab === 'active' ? (
+              <>
+                {incomingOrders.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">{t('incomingOrders')}</h3>
+                    <div className="space-y-4">
+                      {incomingOrders.map(order => {
+                        const total = calculateTotal(order);
+                        return (
+                          <div
+                            key={order.id}
+                            onClick={() => onSelectOrder(order.id)}
+                            className="bg-white p-6 rounded-[2.5rem] shadow-md border border-gray-100 transition-all active:scale-[0.99] cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#e3f2fd' }}>
+                                    <FileText className="w-6 h-6" style={{ color: '#003366' }} />
+                                  </div>
+                                  <div>
+                                    <h3 className="text-lg font-bold text-gray-900">{t('orderFromChef')}</h3>
+                                    <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                      <Calendar className="w-4 h-4" />
+                                      {order.createdAt.toLocaleDateString(useLanguage().language === 'uz' ? 'uz-UZ' : 'ru-RU', {
+                                        day: 'numeric',
+                                        month: 'long',
+                                        year: 'numeric'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="ml-16 space-y-2">
+                                  <div className="flex items-center gap-4 text-sm">
+                                    <span className="text-gray-600">{t('branch')}:</span>
+                                    <span className="font-bold text-gray-900">{t(`branch${order.branch.charAt(0).toUpperCase() + order.branch.slice(1)}` as any)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm">
+                                    <span className="text-gray-600">{t('positions')}:</span>
+                                    <span className="font-bold" style={{ color: '#003366' }}>
+                                      {order.products.filter(p => p.quantity > 0).length}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <h3 className="text-lg font-bold text-gray-900">Заявка от шеф-повара</h3>
-                                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                                  <Calendar className="w-4 h-4" />
-                                  {order.createdAt.toLocaleDateString('ru-RU', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric'
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="ml-16 space-y-2">
-                              <div className="flex items-center gap-4 text-sm">
-                                <span className="text-gray-600">Филиал:</span>
-                                <span className="font-bold text-gray-900">{branchNames[order.branch]}</span>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm">
-                                <span className="text-gray-600">Позиций:</span>
-                                <span className="font-bold" style={{ color: '#003366' }}>
-                                  {order.products.filter(p => p.quantity > 0).length}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <StatusBadge status={order.status} />
-                            {total > 0 && (
-                              <div className="mt-2">
-                                <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Общая сумма</p>
-                                <p className="text-xl font-black" style={{ color: '#003366' }}>
-                                  {total.toLocaleString()} <span className="text-sm font-bold text-gray-400">сум</span>
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {checkingOrders.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Заявки на финальную проверку</h3>
-                <div className="space-y-4">
-                  {checkingOrders.map(order => {
-                    const total = calculateTotal(order);
-                    return (
-                      <div
-                        key={order.id}
-                        onClick={() => onSelectOrder(order.id)}
-                        className="bg-white p-6 rounded-[2.5rem] shadow-md border border-gray-100 transition-all active:scale-[0.99] cursor-pointer"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#e3f2fd' }}>
-                                <FileText className="w-6 h-6" style={{ color: '#003366' }} />
-                              </div>
-                              <div>
-                                <h3 className="text-lg font-bold text-gray-900">Заявка после проверки шеф-повара</h3>
-                                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                                  <Calendar className="w-4 h-4" />
-                                  {order.createdAt.toLocaleDateString('ru-RU', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric'
-                                  })}
-                                </p>
-                                {order.deliveredAt && (
-                                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                                    Доставлено: {order.deliveredAt.toLocaleDateString('ru-RU', {
-                                      day: 'numeric',
-                                      month: 'long',
-                                      year: 'numeric'
-                                    })}
-                                  </p>
+                              <div className="text-right">
+                                <StatusBadge status={order.status} />
+                                {total > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">{t('totalAmount')}</p>
+                                    <p className="text-xl font-black" style={{ color: '#003366' }}>
+                                      {total.toLocaleString()} <span className="text-sm font-bold text-gray-400">{t('sum')}</span>
+                                    </p>
+                                  </div>
                                 )}
-                                {order.estimatedDeliveryDate && (
-                                  <p className="text-xs text-orange-600 font-bold flex items-center gap-1 mt-1">
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {checkingOrders.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">{t('finalCheckOrders')}</h3>
+                    <div className="space-y-4">
+                      {checkingOrders.map(order => {
+                        const total = calculateTotal(order);
+                        return (
+                          <div
+                            key={order.id}
+                            onClick={() => onSelectOrder(order.id)}
+                            className="bg-white p-6 rounded-[2.5rem] shadow-md border border-gray-100 transition-all active:scale-[0.99] cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#e3f2fd' }}>
+                                    <FileText className="w-6 h-6" style={{ color: '#003366' }} />
+                                  </div>
+                                  <div>
+                                    <h3 className="text-lg font-bold text-gray-900">{t('orderAfterChefCheck')}</h3>
+                                    <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                      <Calendar className="w-4 h-4" />
+                                      {order.createdAt.toLocaleDateString(useLanguage().language === 'uz' ? 'uz-UZ' : 'ru-RU', {
+                                        day: 'numeric',
+                                        month: 'long',
+                                        year: 'numeric'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="ml-16 space-y-2">
+                                  <div className="flex items-center gap-4 text-sm">
+                                    <span className="text-gray-600">{t('branch')}:</span>
+                                    <span className="font-bold text-gray-900">{t(`branch${order.branch.charAt(0).toUpperCase() + order.branch.slice(1)}` as any)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm">
+                                    <span className="text-gray-600">{t('positions')}:</span>
+                                    <span className="font-bold" style={{ color: '#003366' }}>
+                                      {order.products.filter(p => p.quantity > 0).length}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <StatusBadge status={order.status} />
+                                {total > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">{t('totalAmount')}</p>
+                                    <p className="text-xl font-black" style={{ color: '#003366' }}>
+                                      {total.toLocaleString()} <span className="text-sm font-bold text-gray-400">{t('sum')}</span>
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {incomingOrders.length === 0 && checkingOrders.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-400">{t('noOrders')}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">{t('archive')}</h3>
+                <div className="space-y-4">
+                  {archiveOrders.length > 0 ? (
+                    archiveOrders.map(order => {
+                      const total = calculateTotal(order);
+                      return (
+                        <div
+                          key={order.id}
+                          onClick={() => onSelectOrder(order.id)}
+                          className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 opacity-80"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                                  <FileText className="w-5 h-5 text-gray-400" />
+                                </div>
+                                <div>
+                                  <h3 className="font-bold text-gray-700">{t(`branch${order.branch.charAt(0).toUpperCase() + order.branch.slice(1)}` as any)}</h3>
+                                  <p className="text-xs text-gray-500 flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
-                                    Ожидаемая доставка: {order.estimatedDeliveryDate.toLocaleDateString('ru-RU', {
-                                      day: 'numeric',
-                                      month: 'long',
-                                      year: 'numeric'
-                                    })}
+                                    {order.createdAt.toLocaleDateString('ru-RU')}
                                   </p>
-                                )}
+                                </div>
                               </div>
                             </div>
-                            <div className="ml-16 space-y-2">
-                              <div className="flex items-center gap-4 text-sm">
-                                <span className="text-gray-600">Филиал:</span>
-                                <span className="font-bold text-gray-900">{branchNames[order.branch]}</span>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm">
-                                <span className="text-gray-600">Позиций:</span>
-                                <span className="font-bold" style={{ color: '#003366' }}>
-                                  {order.products.filter(p => p.quantity > 0).length}
-                                </span>
-                              </div>
+                            <div className="text-right">
+                              <StatusBadge status={order.status} />
+                              <p className="text-sm font-bold text-gray-900 mt-1">
+                                {total.toLocaleString()} {t('sum')}
+                              </p>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <StatusBadge status={order.status} />
-                            {total > 0 && (
-                              <div className="mt-2">
-                                <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-1">Общая сумма</p>
-                                <p className="text-xl font-black" style={{ color: '#003366' }}>
-                                  {total.toLocaleString()} <span className="text-sm font-bold text-gray-400">сум</span>
-                                </p>
-                              </div>
-                            )}
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-400">{t('noOrders')}</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {incomingOrders.length === 0 && checkingOrders.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-400">Нет заявок</p>
               </div>
             )}
           </div>
@@ -275,7 +350,7 @@ export function FinancierView(props: FinancierViewProps) {
   };
 
   const handleDelete = (productId: string) => {
-    if (confirm('Удалить этот продукт?')) {
+    if (confirm(t('alertDeleteConfirm'))) {
       setLocalProducts(prev => prev.filter(p => p.id !== productId));
     }
   };
@@ -302,14 +377,14 @@ export function FinancierView(props: FinancierViewProps) {
         products: localProducts,
         status: 'sent_to_supplier',
       });
-      alert('Список одобрен и отправлен поставщику');
+      alert(t('alertApproved'));
     } else if (order.status === 'financier_checking') {
       onUpdateOrder({
         ...order,
         products: localProducts,
         status: 'completed',
       });
-      alert('Заказ успешно завершен!');
+      alert(t('alertOrderComplete'));
     }
   };
 
@@ -317,19 +392,19 @@ export function FinancierView(props: FinancierViewProps) {
     const data = localProducts
       .filter(p => p.quantity > 0)
       .map(p => ({
-        'Категория': p.category,
-        'Наименование': p.name,
-        'Количество': p.quantity,
-        'Ед. изм.': p.unit,
-        'Цена': p.price || 0,
-        'Сумма': (p.price || 0) * p.quantity,
-        'Шеф': p.chefComment || '',
-        'Поставщик': p.comment || ''
+        [t('category')]: p.category,
+        [t('productName')]: p.name,
+        [t('quantity')]: p.quantity,
+        [t('unit')]: p.unit,
+        [t('price')]: p.price || 0,
+        [t('sum')]: (p.price || 0) * p.quantity,
+        [t('chef') as any]: p.chefComment || '',
+        [t('supplier')]: p.comment || ''
       }));
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Заказ");
+    XLSX.utils.book_append_sheet(wb, ws, t('financierTitle'));
 
     const wscols = [
       { wch: 15 }, // Category
@@ -376,7 +451,7 @@ export function FinancierView(props: FinancierViewProps) {
             </button>
             <div className="flex items-center gap-2">
               <Wallet className="w-4 h-4" />
-              <h1 className="text-lg font-bold">Финансист</h1>
+              <h1 className="text-lg font-bold">{t('financierTitle')}</h1>
             </div>
             {onRefresh ? (
               <button
@@ -391,9 +466,9 @@ export function FinancierView(props: FinancierViewProps) {
           </div>
 
           <div className="relative z-10">
-            <p className="text-white/80 text-[10px] uppercase font-semibold">Филиал: {branchNames[branch]}</p>
+            <p className="text-white/80 text-[10px] uppercase font-semibold">{t('branch')}: {t(`branch${branch.charAt(0).toUpperCase() + branch.slice(1)}` as any)}</p>
             <h2 className="text-xl font-bold italic tracking-tight leading-none">
-              {order.status === 'sent_to_financier' ? 'Входящие заявки' : 'Проверка цен поставщика'}
+              {order.status === 'sent_to_financier' ? t('incomingOrders') : t('finalCheckOrders')}
             </h2>
           </div>
         </header>
@@ -412,7 +487,7 @@ export function FinancierView(props: FinancierViewProps) {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">
-                        {order.status === 'sent_to_financier' ? 'Заявка от шеф-повара' : 'Заявка от поставщика'}
+                        {order.status === 'sent_to_financier' ? t('orderFromChef') : t('orderFromSupplier')}
                       </h3>
                       <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                         <Calendar className="w-4 h-4" />
@@ -426,13 +501,13 @@ export function FinancierView(props: FinancierViewProps) {
                   </div>
                   <div className="ml-16 space-y-2">
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="text-gray-600">Позиций:</span>
+                      <span className="text-gray-600">{t('positions')}:</span>
                       <span className="font-bold text-blue-600">{productsWithQuantity}</span>
                     </div>
                     {totalAmount > 0 && (
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-600">Сумма:</span>
-                        <span className="font-bold text-gray-900">{totalAmount.toLocaleString()} сум</span>
+                        <span className="text-gray-600">{t('sum')}:</span>
+                        <span className="font-bold text-gray-900">{totalAmount.toLocaleString()} {t('sum')}</span>
                       </div>
                     )}
                   </div>
@@ -440,7 +515,7 @@ export function FinancierView(props: FinancierViewProps) {
                 <StatusBadge status={order.status} />
               </div>
               <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
-                <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Нажмите для детального просмотра</p>
+                <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">{t('clickForDetails')}</p>
               </div>
             </div>
           </div>
@@ -468,7 +543,7 @@ export function FinancierView(props: FinancierViewProps) {
           </button>
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4" />
-            <h1 className="text-lg font-bold">Финансист</h1>
+            <h1 className="text-lg font-bold">{t('financierTitle')}</h1>
           </div>
           <div className="flex items-center gap-2">
             {onRefresh && (
@@ -504,7 +579,7 @@ export function FinancierView(props: FinancierViewProps) {
 
         <div className="relative z-10 flex items-end justify-between">
           <div>
-            <p className="text-white/80 text-[10px] uppercase font-semibold leading-none mb-1">Филиал: {branchNames[branch]}</p>
+            <p className="text-white/80 text-[10px] uppercase font-semibold leading-none mb-1">{t('branch')}: {t(`branch${branch.charAt(0).toUpperCase() + branch.slice(1)}` as any)}</p>
             <h2 className="text-xl font-bold italic tracking-tight leading-none">
               {order.createdAt.toLocaleDateString('ru-RU', {
                 day: 'numeric',
@@ -514,7 +589,7 @@ export function FinancierView(props: FinancierViewProps) {
             {order.estimatedDeliveryDate && (
               <p className="text-white/90 text-xs font-bold mt-1 flex items-center gap-1 bg-white/10 px-2 py-1 rounded-lg w-fit">
                 <Calendar className="w-3 h-3" />
-                Ожидаемая доставка: {order.estimatedDeliveryDate.toLocaleDateString('ru-RU', {
+                {t('estimatedDelivery')}: {order.estimatedDeliveryDate.toLocaleDateString('ru-RU', {
                   day: 'numeric',
                   month: 'long'
                 })}

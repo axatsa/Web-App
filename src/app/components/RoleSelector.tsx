@@ -1,6 +1,7 @@
 import { ChefHat, Wallet, Truck, ArrowLeft } from 'lucide-react';
 import type { Role } from '@/app/App';
 import logo from '@/assets/logo.png';
+import { useLanguage } from '@/app/context/LanguageContext';
 
 type RoleSelectorProps = {
   onSelectRole: (role: Role) => void;
@@ -8,6 +9,8 @@ type RoleSelectorProps = {
 };
 
 export function RoleSelector({ onSelectRole, onBack }: RoleSelectorProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-white flex flex-col p-6 relative overflow-hidden">
       {/* Background patterns */}
@@ -17,16 +20,16 @@ export function RoleSelector({ onSelectRole, onBack }: RoleSelectorProps) {
       <div className="flex-1 flex flex-col items-center justify-center z-10">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
-            <div className="w-24 h-24 flex items-center justify-center">
+            <div className="w-36 h-36 flex items-center justify-center">
               <img src={logo} alt="Thompson Logo" className="w-full h-full object-contain" />
             </div>
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 text-center mb-2">
-            Optimizer
+            {t('appTitle')}
           </h1>
           <p className="text-gray-500 text-center mb-10 font-medium">
-            Выберите вашу роль для продолжения
+            {t('selectRole')}
           </p>
 
           <div className="space-y-4">
@@ -39,8 +42,8 @@ export function RoleSelector({ onSelectRole, onBack }: RoleSelectorProps) {
                   <ChefHat className="w-8 h-8 text-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h2 className="text-xl font-bold text-gray-900">Шеф-повар</h2>
-                  <p className="text-sm text-gray-500">Создание списка продуктов</p>
+                  <h2 className="text-xl font-bold text-gray-900">{t('chef')}</h2>
+                  <p className="text-sm text-gray-500">{t('chefDesc')}</p>
                 </div>
               </div>
             </button>
@@ -54,8 +57,8 @@ export function RoleSelector({ onSelectRole, onBack }: RoleSelectorProps) {
                   <Wallet className="w-8 h-8 text-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h2 className="text-xl font-bold text-gray-900">Финансист</h2>
-                  <p className="text-sm text-gray-500">Проверка и корректировка</p>
+                  <h2 className="text-xl font-bold text-gray-900">{t('financier')}</h2>
+                  <p className="text-sm text-gray-500">{t('financierDesc')}</p>
                 </div>
               </div>
             </button>
@@ -69,8 +72,8 @@ export function RoleSelector({ onSelectRole, onBack }: RoleSelectorProps) {
                   <Truck className="w-8 h-8 text-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h2 className="text-xl font-bold text-gray-900">Поставщик</h2>
-                  <p className="text-sm text-gray-500">Установка цен и доставка</p>
+                  <h2 className="text-xl font-bold text-gray-900">{t('supplier')}</h2>
+                  <p className="text-sm text-gray-500">{t('supplierDesc')}</p>
                 </div>
               </div>
             </button>
@@ -81,3 +84,4 @@ export function RoleSelector({ onSelectRole, onBack }: RoleSelectorProps) {
 
   );
 }
+
