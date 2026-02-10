@@ -6,11 +6,12 @@ import type { Order, Product, Unit, Branch } from '@/app/App';
 import { StatusBadge } from '@/app/components/StatusBadge';
 import { useLanguage } from '@/app/context/LanguageContext';
 
-const branchNames: Record<Branch, string> = {
+const branchNames: Record<Branch | 'all', string> = {
     chilanzar: 'Чиланзар (Новза)',
     uchtepa: 'Учтепа',
     shayzantaur: 'Шайзантаур',
     olmazar: 'Олмазар',
+    all: 'Все филиалы',
 };
 
 interface FinancierDetailViewProps {
@@ -178,7 +179,9 @@ export function FinancierDetailView({ order, onUpdateOrder, onBackToRoles, branc
                     </div>
 
                     <div className="relative z-10">
-                        <p className="text-white/80 text-[10px] uppercase font-semibold">{t('branch')}: {t(`branch${branch.charAt(0).toUpperCase() + branch.slice(1)}` as any)}</p>
+                        <p className="text-white/80 text-[10px] uppercase font-semibold">
+                            {t('branch')}: {branch === 'all' ? t('allBranches') : t(`branch${(branch || '').charAt(0).toUpperCase() + (branch || '').slice(1)}` as any)}
+                        </p>
                         <h2 className="text-xl font-bold italic tracking-tight leading-none">
                             {order.status === 'sent_to_financier' ? t('incomingOrders') : t('finalCheckOrders')}
                         </h2>
@@ -281,7 +284,9 @@ export function FinancierDetailView({ order, onUpdateOrder, onBackToRoles, branc
 
                 <div className="relative z-10 flex items-end justify-between">
                     <div>
-                        <p className="text-white/80 text-[10px] uppercase font-semibold leading-none mb-1">{t('branch')}: {t(`branch${branch.charAt(0).toUpperCase() + branch.slice(1)}` as any)}</p>
+                        <p className="text-white/80 text-[10px] uppercase font-semibold leading-none mb-1">
+                            {t('branch')}: {branch === 'all' ? t('allBranches') : t(`branch${(branch || '').charAt(0).toUpperCase() + (branch || '').slice(1)}` as any)}
+                        </p>
                         <h2 className="text-xl font-bold italic tracking-tight leading-none">
                             {order.createdAt.toLocaleDateString('ru-RU', {
                                 day: 'numeric',

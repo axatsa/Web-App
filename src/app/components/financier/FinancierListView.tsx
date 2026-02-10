@@ -12,7 +12,7 @@ interface FinancierListViewProps {
 }
 
 export function FinancierListView({ orders, onSelectOrder, onBackToRoles, onRefresh }: FinancierListViewProps) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
     const [branchFilter, setBranchFilter] = useState<Branch | 'all'>('all');
 
@@ -104,7 +104,7 @@ export function FinancierListView({ orders, onSelectOrder, onBackToRoles, onRefr
                                                                     <h3 className="text-lg font-bold text-gray-900">{t('orderFromChef')}</h3>
                                                                     <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                                                                         <Calendar className="w-4 h-4" />
-                                                                        {order.createdAt.toLocaleDateString(useLanguage().language === 'uz' ? 'uz-UZ' : 'ru-RU', {
+                                                                        {order.createdAt.toLocaleDateString(language === 'uz' ? 'uz-UZ' : 'ru-RU', {
                                                                             day: 'numeric',
                                                                             month: 'long',
                                                                             year: 'numeric'
@@ -166,7 +166,7 @@ export function FinancierListView({ orders, onSelectOrder, onBackToRoles, onRefr
                                                                     <h3 className="text-lg font-bold text-gray-900">{t('orderAfterChefCheck')}</h3>
                                                                     <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                                                                         <Calendar className="w-4 h-4" />
-                                                                        {order.createdAt.toLocaleDateString(useLanguage().language === 'uz' ? 'uz-UZ' : 'ru-RU', {
+                                                                        {order.createdAt.toLocaleDateString(language === 'uz' ? 'uz-UZ' : 'ru-RU', {
                                                                             day: 'numeric',
                                                                             month: 'long',
                                                                             year: 'numeric'
@@ -232,7 +232,11 @@ export function FinancierListView({ orders, onSelectOrder, onBackToRoles, onRefr
                                                                 <FileText className="w-5 h-5 text-gray-400" />
                                                             </div>
                                                             <div>
-                                                                <h3 className="font-bold text-gray-700">{t(`branch${order.branch.charAt(0).toUpperCase() + order.branch.slice(1)}` as any)}</h3>
+                                                                <h3 className="font-bold text-gray-700">
+                                                                    {order.branch === 'all'
+                                                                        ? t('allBranches')
+                                                                        : t(`branch${(order.branch || '').charAt(0).toUpperCase() + (order.branch || '').slice(1)}` as any)}
+                                                                </h3>
                                                                 <p className="text-xs text-gray-500 flex items-center gap-1">
                                                                     <Calendar className="w-3 h-3" />
                                                                     {order.createdAt.toLocaleDateString('ru-RU')}
