@@ -1,3 +1,7 @@
 node_modules
 .env
 .env.example
+github_actions_deploy
+github_actions_deploy.pub
+.venv
+__pycache__
