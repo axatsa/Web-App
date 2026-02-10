@@ -219,6 +219,7 @@ export default function App() {
           onBackToRoles={() => setSelectedOrderId(null)}
           branch={selectedOrder.branch}
           onRefresh={loadOrders}
+          isFromBot={isFromBot}
         />
       );
     }
@@ -229,6 +230,7 @@ export default function App() {
         onSelectOrder={setSelectedOrderId}
         onBackToRoles={handleBackToStart}
         onRefresh={loadOrders}
+        isFromBot={isFromBot}
       />
     );
   }
@@ -245,6 +247,7 @@ export default function App() {
           onBackToRoles={() => setSelectedOrderId(null)}
           branch={selectedOrder.branch}
           onRefresh={loadOrders}
+          isFromBot={isFromBot}
         />
       );
     }
@@ -255,6 +258,7 @@ export default function App() {
         onSelectOrder={setSelectedOrderId}
         onBackToRoles={handleBackToStart}
         onRefresh={loadOrders}
+        isFromBot={isFromBot}
       />
     );
   }
@@ -283,6 +287,7 @@ export default function App() {
         deliveryBranches={deliveryBranches}
         onBack={() => setSelectedRole(null)}
         onRefresh={loadOrders}
+        isFromBot={isFromBot}
       />
     );
   }
@@ -323,6 +328,7 @@ export default function App() {
           onBackToRoles={() => setSelectedBranch(null)}
           branch={selectedBranch}
           onRefresh={loadOrders}
+          isFromBot={isFromBot}
         />
       )}
     </div>

@@ -8,6 +8,7 @@ type FinancierViewProps =
     onSelectOrder: (orderId: string) => void;
     onBackToRoles: () => void;
     onRefresh?: () => void;
+    isFromBot?: boolean;
   }
   | {
     order: Order;
@@ -15,8 +16,8 @@ type FinancierViewProps =
     onBackToRoles: () => void;
     branch: Branch;
     onRefresh?: () => void;
+    isFromBot?: boolean;
   };
-
 export function FinancierView(props: FinancierViewProps) {
   // Если передан массив заявок - показываем список
   if ('orders' in props) {

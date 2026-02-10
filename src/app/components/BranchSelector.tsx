@@ -9,6 +9,7 @@ type BranchSelectorProps = {
   deliveryBranches?: Branch[];
   onBack?: () => void;
   onRefresh?: () => void;
+  isFromBot?: boolean;
 };
 
 const branches: { id: Branch; name: string; color: string }[] = [
@@ -18,19 +19,19 @@ const branches: { id: Branch; name: string; color: string }[] = [
   { id: 'olmazar', name: 'Олмазар', color: 'from-[#16a085] to-[#138d75]' },
 ];
 
-export function BranchSelector({ onSelectBranch, onCheckDeliveries, deliveryBranches = [], onBack, onRefresh }: BranchSelectorProps) {
+export function BranchSelector({ onSelectBranch, onCheckDeliveries, deliveryBranches = [], onBack, onRefresh, isFromBot }: BranchSelectorProps) {
   const { t } = useLanguage();
   return (
     <div className="min-h-screen bg-white flex flex-col p-6 relative overflow-hidden">
       <div className="flex justify-between items-start mb-6 z-10 relative">
-        {onBack ? (
+        {(onBack && !isFromBot) ? (
           <button
             onClick={onBack}
             className="p-2 hover:bg-gray-100 rounded-lg active:scale-95 transition-transform"
           >
             <ArrowLeft className="w-6 h-6 text-gray-900" />
           </button>
-        ) : <div />}
+        ) : <div className="w-10" />}
 
         {onRefresh && (
           <button

@@ -8,6 +8,7 @@ type SupplierViewProps =
     onSelectOrder: (orderId: string) => void;
     onBackToRoles: () => void;
     onRefresh?: () => void;
+    isFromBot?: boolean;
   }
   | {
     order: Order;
@@ -15,6 +16,7 @@ type SupplierViewProps =
     onBackToRoles: () => void;
     branch: Branch;
     onRefresh?: () => void;
+    isFromBot?: boolean;
   };
 
 export function SupplierView(props: SupplierViewProps) {

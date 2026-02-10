@@ -9,9 +9,10 @@ interface FinancierListViewProps {
     onSelectOrder: (orderId: string) => void;
     onBackToRoles: () => void;
     onRefresh?: () => void;
+    isFromBot?: boolean;
 }
 
-export function FinancierListView({ orders, onSelectOrder, onBackToRoles, onRefresh }: FinancierListViewProps) {
+export function FinancierListView({ orders, onSelectOrder, onBackToRoles, onRefresh, isFromBot }: FinancierListViewProps) {
     const { t, language } = useLanguage();
     const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
     const [branchFilter, setBranchFilter] = useState<Branch | 'all'>('all');
@@ -39,9 +40,13 @@ export function FinancierListView({ orders, onSelectOrder, onBackToRoles, onRefr
         <div className="h-screen overflow-hidden bg-[#f5f5f5] flex flex-col">
             <header className="flex-none text-white p-4 pb-4 rounded-b-2xl shadow-lg relative overflow-hidden" style={{ backgroundColor: '#003366' }}>
                 <div className="flex items-center justify-between mb-2 relative z-10">
-                    <button onClick={onBackToRoles} className="p-2 hover:bg-white/20 rounded-full transition-colors">
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
+                    {!isFromBot ? (
+                        <button onClick={onBackToRoles} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                    ) : (
+                        <div className="w-9" />
+                    )}
                     <div className="flex items-center gap-2">
                         <Wallet className="w-4 h-4" />
                         <h1 className="text-lg font-bold">{t('financierTitle')}</h1>
