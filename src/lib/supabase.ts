@@ -1,7 +1,47 @@
 
-import { createClient } from '@supabase/supabase-js';
+const API_URL = 'http://localhost:8000';
 
-const supabaseUrl = 'https://usatbokjphhscygveqsv.supabase.co';
-const supabaseKey = 'sb_publishable_T8sOwYq6jA3AWbO70_n0ww_AW706_b4';
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = {
+    from: (table: string) => {
+        const builder = {
+            select: (columns: string) => {
+                const promise = (async () => {
+                    try {
+                        const response = await fetch(`${API_URL}/${table}`);
+                        const data = await response.json();
+                        return { data, error: null };
+                    } catch (error) {
+                        console.error('Fetch error:', error);
+                        return { data: null, error };
+                    }
+                })();
+                // Make it thenable to act like a promise
+                (promise as any).then = promise.then.bind(promise);
+                (promise as any).catch = promise.catch.bind(promise);
+                return promise;
+            },
+            upsert: async (payload: any) => {
+                try {
+                    const response = await fetch(`${API_URL}/${table}/upsert`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await response.json();
+                    return { data, error: response.ok ? null : { message: 'Failed to upsert' } };
+                } catch (error) {
+                    console.error('Upsert error:', error);
+                    return { data: null, error };
+                }
+            },
+        };
+        return builder;
+    },
+    channel: () => ({
+        on: () => ({
+            subscribe: () => ({
+                unsubscribe: () => { }
+            })
+        })
+    })
+} as any;

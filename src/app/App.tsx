@@ -119,18 +119,13 @@ export default function App() {
   useEffect(() => {
     loadOrders();
 
-    // Subscribe to changes (Real-time updates!)
-    const subscription = supabase
-      .channel('orders_channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload: any) => {
-        console.log('🔄 Realtime update received:', payload);
-        // Reload all orders to be safe or handle delta
-        loadOrders();
-      })
-      .subscribe();
+    // Use polling as a replacement for Supabase Real-time
+    const interval = setInterval(() => {
+      loadOrders();
+    }, 5000);
 
     return () => {
-      subscription.unsubscribe();
+      clearInterval(interval);
     };
   }, []);
 

@@ -15,7 +15,9 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-from supabase import create_client, Client
+import sqlite3
+import json
+import uuid
 
 # Load environment variables
 load_dotenv()
@@ -33,8 +35,45 @@ SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://usatbokjphhscygveqsv.supabase.
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 WEBAPP_URL = os.getenv('WEBAPP_URL', 'https://your-webapp-url.com')
 
-# Supabase client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_KEY else None
+# Database path
+DB_PATH = os.getenv('DB_PATH', 'database.db')
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# Ensure tables exist (shared with api.py logic)
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        telegram_id INTEGER UNIQUE NOT NULL,
+        full_name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        branch TEXT,
+        language TEXT DEFAULT 'ru',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY,
+        status TEXT NOT NULL,
+        products TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        deliveredAt TEXT,
+        estimatedDeliveryDate TEXT,
+        branch TEXT NOT NULL
+    )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # Conversation states
 LANGUAGE, FIO, ROLE, PASSWORD, BRANCH, SETTINGS = range(6)
@@ -129,45 +168,47 @@ def get_back_keyboard(lang: str) -> ReplyKeyboardMarkup:
 
 def get_user_by_telegram_id(telegram_id: int) -> Optional[dict]:
     """Get user from database by telegram ID"""
-    if not supabase:
-        return None
+    conn = get_db_connection()
     try:
-        result = supabase.table('users').select('*').eq('telegram_id', telegram_id).execute()
-        if result.data and len(result.data) > 0:
-            return result.data[0]
+        user = conn.execute('SELECT * FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()
+        if user:
+            return dict(user)
     except Exception as e:
         logger.error(f"Error fetching user: {e}")
+    finally:
+        conn.close()
     return None
 
 def save_user(telegram_id: int, full_name: str, role: str, branch: str, language: str) -> bool:
     """Save or update user in database"""
-    if not supabase:
-        logger.warning("Supabase not configured, skipping save")
-        return True
+    conn = get_db_connection()
     try:
         # Check if user exists
         existing = get_user_by_telegram_id(telegram_id)
         if existing:
             # Update
-            supabase.table('users').update({
-                'full_name': full_name,
-                'role': role,
-                'branch': branch,
-                'language': language,
-            }).eq('telegram_id', telegram_id).execute()
+            conn.execute('''
+                UPDATE users SET
+                    full_name = ?,
+                    role = ?,
+                    branch = ?,
+                    language = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE telegram_id = ?
+            ''', (full_name, role, branch, language, telegram_id))
         else:
             # Insert
-            supabase.table('users').insert({
-                'telegram_id': telegram_id,
-                'full_name': full_name,
-                'role': role,
-                'branch': branch,
-                'language': language,
-            }).execute()
+            conn.execute('''
+                INSERT INTO users (id, telegram_id, full_name, role, branch, language)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (str(uuid.uuid4()), telegram_id, full_name, role, branch, language))
+        conn.commit()
         return True
     except Exception as e:
         logger.error(f"Error saving user: {e}")
         return False
+    finally:
+        conn.close()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Start command - check if user exists or start registration"""

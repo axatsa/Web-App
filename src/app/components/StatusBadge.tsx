@@ -22,7 +22,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <div
-      className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium"
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap"
       style={{
         backgroundColor: config.bgColor,
         color: config.color
