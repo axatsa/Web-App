@@ -37,7 +37,7 @@ WEBAPP_URL = os.getenv('WEBAPP_URL', 'https://your-webapp-url.com')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_KEY else None
 
 # Conversation states
-LANGUAGE, FIO, ROLE, PASSWORD, BRANCH = range(5)
+LANGUAGE, FIO, ROLE, PASSWORD, BRANCH, SETTINGS = range(6)
 
 # Role passwords
 ROLE_PASSWORDS = {
@@ -413,14 +413,24 @@ async def branch_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     return ConversationHandler.END
 
-async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show settings menu"""
     query = update.callback_query
     await query.answer()
     
     telegram_id = update.effective_user.id
     user = get_user_by_telegram_id(telegram_id)
-    lang = user.get('language', 'ru') if user else 'ru'
+    
+    if not user:
+        await query.edit_message_text("❌ Пользователь не найден.")
+        return ConversationHandler.END
+
+    lang = user.get('language', 'ru')
+    # Pre-populate user_data for editing
+    context.user_data['language'] = lang
+    context.user_data['full_name'] = user.get('full_name')
+    context.user_data['role'] = user.get('role')
+    context.user_data['branch'] = user.get('branch')
     
     buttons = [
         [InlineKeyboardButton(get_text(lang, 'change_language'), callback_data='setting_language')],
@@ -428,7 +438,7 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         [InlineKeyboardButton(get_text(lang, 'change_role'), callback_data='setting_role')],
     ]
     
-    if user and user.get('role') != 'financier':
+    if user.get('role') != 'financier':
         buttons.append([InlineKeyboardButton(get_text(lang, 'change_branch'), callback_data='setting_branch')])
     
     buttons.append([InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_main')])
@@ -439,6 +449,74 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         get_text(lang, 'settings_menu'),
         reply_markup=keyboard
     )
+    return SETTINGS
+
+async def setting_language_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Jump to language selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton('🇷🇺 Русский', callback_data='lang_ru'),
+            InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data='lang_uz'),
+        ]
+    ])
+    
+    await query.edit_message_text(TEXTS['ru']['welcome'], reply_markup=keyboard)
+    return LANGUAGE
+
+async def setting_fio_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Jump to FIO entry"""
+    query = update.callback_query
+    await query.answer()
+    lang = context.user_data.get('language', 'ru')
+    
+    await query.edit_message_text(get_text(lang, 'enter_fio'))
+    await query.message.reply_text('⌨️', reply_markup=get_back_keyboard(lang))
+    return FIO
+
+async def setting_role_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Jump to role selection"""
+    query = update.callback_query
+    await query.answer()
+    lang = context.user_data.get('language', 'ru')
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
+        [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
+        [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+    ])
+    
+    await query.edit_message_text(get_text(lang, 'select_role'), reply_markup=keyboard)
+    return ROLE
+
+async def setting_branch_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Jump to branch selection"""
+    query = update.callback_query
+    await query.answer()
+    lang = context.user_data.get('language', 'ru')
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'branch_chilanzar'), callback_data='branch_chilanzar')],
+        [InlineKeyboardButton(get_text(lang, 'branch_uchtepa'), callback_data='branch_uchtepa')],
+        [InlineKeyboardButton(get_text(lang, 'branch_shayzantaur'), callback_data='branch_shayzantaur')],
+        [InlineKeyboardButton(get_text(lang, 'branch_olmazar'), callback_data='branch_olmazar')],
+    ])
+    
+    await query.edit_message_text(get_text(lang, 'select_branch'), reply_markup=keyboard)
+    return BRANCH
+
+async def back_to_main_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Return to main menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    # Just restart the start flow which will show the welcome back message
+    # We simulate a message update to reuse start()
+    query.message.from_user = query.from_user
+    await start(update, context)
+    return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel conversation"""
@@ -459,19 +537,28 @@ def main() -> None:
     
     # Registration conversation handler
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[
+            CommandHandler('start', start),
+            CallbackQueryHandler(settings_menu, pattern='^settings$'),
+        ],
         states={
             LANGUAGE: [CallbackQueryHandler(language_selected, pattern='^lang_')],
             FIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, fio_entered)],
             ROLE: [CallbackQueryHandler(role_selected, pattern='^role_')],
             PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, password_entered)],
             BRANCH: [CallbackQueryHandler(branch_selected, pattern='^branch_')],
+            SETTINGS: [
+                CallbackQueryHandler(setting_language_handle, pattern='^setting_language$'),
+                CallbackQueryHandler(setting_fio_handle, pattern='^setting_fio$'),
+                CallbackQueryHandler(setting_role_handle, pattern='^setting_role$'),
+                CallbackQueryHandler(setting_branch_handle, pattern='^setting_branch$'),
+                CallbackQueryHandler(back_to_main_handle, pattern='^back_to_main$'),
+            ],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
     
     application.add_handler(conv_handler)
-    application.add_handler(CallbackQueryHandler(settings_menu, pattern='^settings$'))
     
     # Start polling
     logger.info("Bot starting...")
