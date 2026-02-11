@@ -1,4 +1,4 @@
-import type { Order, Branch } from '@/app/App';
+import type { Order, Branch } from '@/lib/api';
 import { SupplierListView } from './supplier/SupplierListView';
 import { SupplierDetailView } from './supplier/SupplierDetailView';
 

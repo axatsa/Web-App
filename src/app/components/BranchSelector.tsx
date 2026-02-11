@@ -1,6 +1,6 @@
 import { MapPin, ArrowLeft, Truck, Check, RefreshCcw } from 'lucide-react';
 import { useLanguage } from '@/app/context/LanguageContext';
-import type { Branch } from '@/app/App';
+import type { Branch } from '@/lib/api';
 import thompsonLogo from '@/assets/logo.png';
 
 type BranchSelectorProps = {

@@ -1,5 +1,5 @@
 import { ArrowLeft, Truck, RefreshCcw } from 'lucide-react';
-import type { Order } from '@/app/App';
+import type { Order } from '@/lib/api';
 import { StatusBadge } from '@/app/components/StatusBadge';
 import { useLanguage } from '@/app/context/LanguageContext';
 

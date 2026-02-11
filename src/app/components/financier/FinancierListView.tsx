@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Wallet, RefreshCcw, FileText, Calendar } from 'lucide-react';
-import type { Order, Branch } from '@/app/App';
+import type { Order, Branch } from '@/lib/api';
 import { StatusBadge } from '@/app/components/StatusBadge';
 import { useLanguage } from '@/app/context/LanguageContext';
 

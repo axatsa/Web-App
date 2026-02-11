@@ -16,56 +16,16 @@ import { RoleSelector } from '@/app/components/RoleSelector';
 import { BranchSelector } from '@/app/components/BranchSelector';
 import { LanguageProvider, useLanguage } from '@/app/context/LanguageContext';
 
-export type Role = 'chef' | 'financier' | 'supplier';
+import { api } from '@/lib/api';
+import type { Order, Product, Status, Branch, Role } from '@/lib/api';
 
-export type Branch = 'chilanzar' | 'uchtepa' | 'shayzantaur' | 'olmazar';
-
-export type Status =
-  | 'sent_to_chef'       // 1. Отправлен шеф повару
-  | 'sent_to_financier'  // 2. Отправлен финансисту
-  | 'sent_to_supplier'   // 3. Отправлен поставщику
-  | 'supplier_collecting' // 4. Поставщик собирает заказ
-  | 'supplier_delivering' // 5. Поставщик доставляет заказ
-  | 'chef_checking'      // 6. Шеф-повар проверяет заказ
-  | 'financier_checking' // 7. Финансист проверяет заказ того что проверил шеф повар
-  | 'completed';         // 8. Завершен
-
-
-export type Unit = 'кг' | 'шт' | 'л' | 'г';
-
-export type Product = {
-  id: string;
-  name: string;
-  category: string;
-  quantity: number;
-  unit: Unit;
-  price?: number;
-  comment?: string;
-  checked?: boolean;
-  chefComment?: string;
-};
-
-// Функция для получения текущей даты по ташкентскому времени
-export function getTashkentDate(): Date {
+export { getTashkentDate };
+function getTashkentDate(): Date {
   const now = new Date();
-  // Ташкент UTC+5
-  const tashkentOffset = 5 * 60; // минуты
+  const tashkentOffset = 5 * 60;
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   return new Date(utc + (tashkentOffset * 60000));
 }
-
-export type Order = {
-  id: string;
-  status: Status;
-  products: Product[];
-  createdAt: Date;
-  deliveredAt?: Date; // Дата доставки (устанавливается при доставке)
-  estimatedDeliveryDate?: Date; // Ориентировочная дата доставки (от поставщика)
-  branch: Branch; // Филиал, из которого пришла заявка
-};
-
-import { supabase } from '@/lib/supabase';
-import { MASTER_PRODUCT_LIST } from '@/data/products';
 
 export default function App() {
   const { t } = useLanguage();
@@ -99,25 +59,33 @@ export default function App() {
   }, []);
 
   const [orders, setOrders] = useState<Order[]>([]);
-  // Load orders from Supabase
+  const [masterProducts, setMasterProducts] = useState<Product[]>([]);
+
+  const loadInitialData = async () => {
+    try {
+      const [ordersData, productsData] = await Promise.all([
+        api.getOrders(),
+        api.getProducts()
+      ]);
+
+      setOrders(ordersData);
+      setMasterProducts(productsData);
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+    }
+  };
+
   const loadOrders = async () => {
-    const { data, error } = await supabase.from('orders').select('*');
-    if (error) {
+    try {
+      const data = await api.getOrders();
+      setOrders(data);
+    } catch (error) {
       console.error('Error loading orders:', error);
-    } else if (data) {
-      // Convert string dates to Date objects if needed
-      const parsedData = data.map((o: any) => ({
-        ...o,
-        createdAt: new Date(o.createdAt),
-        deliveredAt: o.deliveredAt ? new Date(o.deliveredAt) : undefined,
-        estimatedDeliveryDate: o.estimatedDeliveryDate ? new Date(o.estimatedDeliveryDate) : undefined,
-      }));
-      setOrders(parsedData);
     }
   };
 
   useEffect(() => {
-    loadOrders();
+    loadInitialData();
 
     // Use polling as a replacement for Supabase Real-time
     const interval = setInterval(() => {
@@ -145,26 +113,14 @@ export default function App() {
     setSelectedOrderId(null);
     setSelectedBranch(null);
 
-    console.log('💾 Saving order to Supabase:', updatedOrder);
-
-    // 2. Prepare payload for Supabase (sanitize Dates)
-    const payload = {
-      ...updatedOrder,
-      createdAt: updatedOrder.createdAt.toISOString(), // Ensure ISO string
-      deliveredAt: updatedOrder.deliveredAt ? updatedOrder.deliveredAt.toISOString() : null,
-      estimatedDeliveryDate: updatedOrder.estimatedDeliveryDate ? updatedOrder.estimatedDeliveryDate.toISOString() : null,
-    };
-
-    // 3. Send to Supabase
-    const { error } = await supabase.from('orders').upsert(payload);
-
-    if (error) {
-      console.error('❌ Error saving order to Supabase:', error);
-      alert(`Ошибка сохранения! Данные не отправлены.\nОшибка: ${error.message}`);
-      // Revert optimistic update? For now, just warn.
-      loadOrders(); // Reload actual data to revert
-    } else {
+    // 2. Send to local API
+    try {
+      await api.upsertOrder(updatedOrder);
       console.log('✅ Order saved successfully!');
+    } catch (error: any) {
+      console.error('❌ Error saving order:', error);
+      alert(`Ошибка сохранения! Данные не отправлены.\nОшибка: ${error.message}`);
+      loadOrders(); // Reload actual data to revert
     }
   };
 
@@ -293,8 +249,8 @@ export default function App() {
   let currentOrder = orders.find(o => o.branch === selectedBranch && (o.status === 'sent_to_chef' || o.status === 'chef_checking'));
 
   if (!currentOrder) {
-    // Создаем новую заявку с базовым списком продуктов
-    const baseProducts = MASTER_PRODUCT_LIST.map((p: any) => ({
+    // Создаем новую заявку с базовым списком продуктов из БД
+    const baseProducts = masterProducts.map((p) => ({
       ...p,
       quantity: 0,
       price: undefined,

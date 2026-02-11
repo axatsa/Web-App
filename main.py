@@ -31,8 +31,6 @@ logger = logging.getLogger(__name__)
 
 # Environment variables
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://usatbokjphhscygveqsv.supabase.co')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 WEBAPP_URL = os.getenv('WEBAPP_URL', 'https://your-webapp-url.com')
 
 # Database path
@@ -68,6 +66,14 @@ def init_db():
         deliveredAt TEXT,
         estimatedDeliveryDate TEXT,
         branch TEXT NOT NULL
+    )
+    ''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS master_products (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        unit TEXT NOT NULL
     )
     ''')
     conn.commit()

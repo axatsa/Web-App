@@ -1,5 +1,4 @@
-import { ChefHat, Wallet, Truck, ArrowLeft } from 'lucide-react';
-import type { Role } from '@/app/App';
+import type { Role } from '@/lib/api';
 import logo from '@/assets/logo.png';
 import { useLanguage } from '@/app/context/LanguageContext';
 

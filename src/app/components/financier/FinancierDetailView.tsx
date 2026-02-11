@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Send, Plus, Trash2, Edit2, Check, X, Wallet, FileText, Calendar, MessageSquare, RefreshCcw, AlignJustify, LayoutGrid, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import type { Order, Product, Unit, Branch } from '@/app/App';
+import type { Order, Product, Unit, Branch } from '@/lib/api';
 import { StatusBadge } from '@/app/components/StatusBadge';
 import { useLanguage } from '@/app/context/LanguageContext';
 

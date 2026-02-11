@@ -1,5 +1,5 @@
 import { useLanguage } from '@/app/context/LanguageContext';
-import type { Status } from '@/app/App';
+import type { Status } from '@/lib/api';
 
 type StatusBadgeProps = {
   status: Status;
