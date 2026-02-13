@@ -169,6 +169,7 @@ class Product(BaseModel):
     comment: Optional[str] = None
     checked: Optional[bool] = None
     chefComment: Optional[str] = None
+    deliveryDate: Optional[str] = None
 
 class Order(BaseModel):
     id: str

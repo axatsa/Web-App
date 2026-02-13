@@ -11,6 +11,7 @@ export type Product = {
     comment?: string;
     checked?: boolean;
     chefComment?: string;
+    deliveryDate?: string;
 };
 
 export type Status =

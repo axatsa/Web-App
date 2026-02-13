@@ -34,7 +34,7 @@ export function SupplierDetailView({ order, onUpdateOrder, onBackToRoles, branch
         setLocalProducts(order.products);
     }, [order.products]);
 
-    const handleUpdateProduct = (productId: string, field: 'price' | 'comment' | 'checked', value: any) => {
+    const handleUpdateProduct = (productId: string, field: 'price' | 'comment' | 'checked' | 'deliveryDate', value: any) => {
         setLocalProducts(prev =>
             prev.map(p =>
                 p.id === productId ? { ...p, [field]: value } : p
@@ -202,6 +202,12 @@ export function SupplierDetailView({ order, onUpdateOrder, onBackToRoles, branch
                                                             />
                                                             <MessageSquare className="absolute left-2 top-1.5 w-3.5 h-3.5 text-gray-300" />
                                                         </div>
+                                                        <input
+                                                            type="date"
+                                                            value={product.deliveryDate ? new Date(product.deliveryDate).toISOString().split('T')[0] : ''}
+                                                            onChange={(e) => handleUpdateProduct(product.id, 'deliveryDate', e.target.value)}
+                                                            className="w-32 bg-gray-50 rounded-lg px-2 py-1.5 text-sm font-bold text-gray-700 focus:ring-1 focus:ring-orange-500 outline-none"
+                                                        />
                                                     </div>
                                                 </>
                                             ) : (
@@ -255,6 +261,16 @@ export function SupplierDetailView({ order, onUpdateOrder, onBackToRoles, branch
                                                                 className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 font-medium text-gray-700 focus:ring-2 focus:ring-orange-500 transition-all resize-none"
                                                             />
                                                             <MessageSquare className="absolute right-5 top-4 w-4 h-4 text-gray-300" />
+                                                        </div>
+
+                                                        <div className="relative">
+                                                            <input
+                                                                type="date"
+                                                                value={product.deliveryDate ? new Date(product.deliveryDate).toISOString().split('T')[0] : ''}
+                                                                onChange={(e) => handleUpdateProduct(product.id, 'deliveryDate', e.target.value)}
+                                                                className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 font-medium text-gray-700 focus:ring-2 focus:ring-orange-500 transition-all"
+                                                            />
+                                                            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs uppercase">{t('deliveryDate')}</span>
                                                         </div>
                                                     </div>
                                                 </>

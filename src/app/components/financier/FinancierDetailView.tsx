@@ -446,6 +446,12 @@ export function FinancierDetailView({ order, onUpdateOrder, onBackToRoles, branc
                                                                         <p><b>Шеф-повар:</b> {product.chefComment}</p>
                                                                     </div>
                                                                 )}
+                                                                {product.deliveryDate && (
+                                                                    <div className="flex items-start gap-2 text-xs text-orange-600 bg-orange-50 p-2 rounded-lg mt-2">
+                                                                        <Calendar className="w-3 h-3 mt-0.5 shrink-0" />
+                                                                        <p><b>Дата доставки:</b> {new Date(product.deliveryDate).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             {!isReadOnly && !isFinalCheck && (
                                                                 <div className="flex gap-2">
