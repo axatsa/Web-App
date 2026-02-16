@@ -1,44 +1,44 @@
-# 🚀 Optimizer Demo Guide
+# 🚀 Руководство по Демонстрации "Optimizer"
 
-This guide will help you run the **Optimizer** application for your presentation.
+Это руководство поможет вам запустить приложение **Optimizer** для вашей презентации.
 
-## ✅ Before the Meeting (Do this NOW)
+## ✅ Перед встречей (Сделайте это СЕЙЧАС)
 
-1.  **Get a Telegram Bot Token**:
-    *   Open Telegram and search for `@BotFather`.
-    *   Send the command `/newbot`.
-    *   Follow instructions to name your bot (e.g., `OptimizerDemoBot`).
-    *   Copy the **HTTP API Token** it gives you.
+1.  **Получите токен Telegram бота**:
+    *   Откройте Telegram и найдите `@BotFather`.
+    *   Отправьте команду `/newbot`.
+    *   Следуйте инструкциям, чтобы назвать бота (например, `OptimizerDemoBot`).
+    *   Скопируйте **HTTP API Token**, который он выдаст.
 
-2.  **Configure the App**:
-    *   Open the file `.env` in this folder.
-    *   Paste your token after `BOT_TOKEN=`.
-    *   Save the file.
+2.  **Настройте приложение**:
+    *   Откройте файл `.env` в этой папке.
+    *   Вставьте ваш токен после `BOT_TOKEN=`.
+    *   Сохраните файл.
 
-3.  **Test the Run**:
-    *   Double-click `start_demo.bat`.
-    *   Wait for 3 windows to open.
-    *   Verify the web page opens in your browser.
+3.  **Тестовый запуск**:
+    *   Дважды нажмите на `start_demo.bat`.
+    *   Дождитесь открытия 3 окон.
+    *   Убедитесь, что веб-страница открывается в браузере.
 
 ---
 
-## 🎤 During the Demo
+## 🎤 Во время Демонстрации
 
-1.  **Start the System**:
-    *   Double-click `start_demo.bat`.
-    *   Wait ~10 seconds for everything to load.
+1.  **Запуск системы**:
+    *   Дважды нажмите на `start_demo.bat`.
+    *   Подождите ~10 секунд, пока все загрузится.
 
-2.  **Show the Workflow**:
-    *   **Open Telegram** and find your bot.
-    *   Type `/start`.
-    *   **Register**: Choose a role (e.g., Chef), enter a name.
-    *   **Open App**: Click the "Open Optimizer" button.
-    *   **Verify**: Show that the web app opens with your data.
+2.  **Показать процесс**:
+    *   **Откройте Telegram** и найдите вашего бота.
+    *   Напишите `/start`.
+    *   **Регистрация**: Выберите роль (например, Шеф), введите имя.
+    *   **Открыть приложение**: Нажмите кнопку "Открыть Optimizer".
+    *   **Проверка**: Покажите, что веб-приложение открывается с вашими данными.
 
-3.  **Troubleshooting**:
-    *   **White Screen?** Refresh the page. If it persists, check the "Frontend" window for errors.
-    *   **Bot not replying?** Check the "Bot" window. If it says "Conflict: terminated by other getUpdates", close all python windows and run `start_demo.bat` again.
+3.  **Устранение неполадок**:
+    *   **Белый экран?** Обновите страницу. Если не помогает, посмотрите в окно "Frontend" на наличие ошибок.
+    *   **Бот не отвечает?** Проверьте окно "Bot". Если там написано "Conflict: terminated by other getUpdates", закройте все окна Python и запустите `start_demo.bat` снова.
 
-## ⚠️ Important Notes
-*   **Do NOT close the black terminal windows.** They are the server. Minimizing them is fine.
-*   The app runs on `localhost`. **It will only work on THIS computer.** You cannot open it on your phone unless you set up tunneling (advanced). Stick to the laptop for the demo.
+## ⚠️ Важные заметки
+*   **НЕ закрывайте черные окна терминала.** Это сервер. Сворачивать их можно.
+*   Приложение работает на `localhost`. **Оно будет работать ТОЛЬКО НА ЭТОМ компьютере.** Вы не сможете открыть его на телефоне, если не настроите туннелирование (сложно). Используйте ноутбук для демо.

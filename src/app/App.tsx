@@ -249,6 +249,19 @@ export default function App() {
   let currentOrder = orders.find(o => o.branch === selectedBranch && (o.status === 'sent_to_chef' || o.status === 'chef_checking'));
 
   if (!currentOrder) {
+    // ВАЖНО: Проверяем, что продукты уже загрузились из API
+    if (masterProducts.length === 0) {
+      // Показываем загрузку, пока продукты не загрузятся
+      return (
+        <div className="h-screen flex items-center justify-center bg-[#f5f5f5]">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-[#8B0000] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Загрузка продуктов...</p>
+          </div>
+        </div>
+      );
+    }
+
     // Создаем новую заявку с базовым списком продуктов из БД
     const baseProducts = masterProducts.map((p) => ({
       ...p,
@@ -265,6 +278,7 @@ export default function App() {
       products: baseProducts,
     };
   }
+
 
   const handleBack = () => {
     setSelectedBranch(null);

@@ -267,7 +267,236 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return LANGUAGE
 
-# ... (handlers between start and back_to_main_handle)
+async def language_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle language selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    lang = query.data.split('_')[1]  # Extract 'ru' or 'uz' from 'lang_ru'
+    context.user_data['language'] = lang
+    
+    await query.edit_message_text(
+        get_text(lang, 'enter_fio'),
+        reply_markup=None
+    )
+    return FIO
+
+async def fio_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle FIO entry"""
+    lang = context.user_data.get('language', 'ru')
+    context.user_data['full_name'] = update.message.text
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
+        [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
+        [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+    ])
+    
+    await update.message.reply_text(
+        get_text(lang, 'select_role'),
+        reply_markup=keyboard
+    )
+    return ROLE
+
+async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle role selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    lang = context.user_data.get('language', 'ru')
+    role = query.data.split('_')[1]  # Extract 'chef', 'financier', or 'supplier'
+    context.user_data['role'] = role
+    
+    await query.edit_message_text(
+        get_text(lang, 'enter_password', role=get_text(lang, f'role_{role}')),
+        reply_markup=None
+    )
+    return PASSWORD
+
+async def password_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle password entry"""
+    lang = context.user_data.get('language', 'ru')
+    role = context.user_data.get('role')
+    password = update.message.text.strip()
+    
+    if password != ROLE_PASSWORDS.get(role):
+        await update.message.reply_text(get_text(lang, 'wrong_password'))
+        return PASSWORD
+    
+    # If financier, skip branch selection
+    if role == 'financier':
+        context.user_data['branch'] = 'all'
+        return await finalize_registration(update, context)
+    
+    # Show branch selection
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'branch_chilanzar'), callback_data='branch_chilanzar')],
+        [InlineKeyboardButton(get_text(lang, 'branch_uchtepa'), callback_data='branch_uchtepa')],
+        [InlineKeyboardButton(get_text(lang, 'branch_shayzantaur'), callback_data='branch_shayzantaur')],
+        [InlineKeyboardButton(get_text(lang, 'branch_olmazar'), callback_data='branch_olmazar')],
+    ])
+    
+    await update.message.reply_text(
+        get_text(lang, 'select_branch'),
+        reply_markup=keyboard
+    )
+    return BRANCH
+
+async def branch_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle branch selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    branch = query.data.split('_')[1]
+    context.user_data['branch'] = branch
+    
+    return await finalize_registration(update, context)
+
+async def finalize_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Finalize registration and save user"""
+    telegram_id = update.effective_user.id
+    lang = context.user_data.get('language', 'ru')
+    full_name = context.user_data.get('full_name')
+    role = context.user_data.get('role')
+    branch = context.user_data.get('branch', 'all')
+    
+    # Save to database
+    save_user(telegram_id, full_name, role, branch, lang)
+    
+    # Build confirmation message
+    role_key = f"role_{role}"
+    if role == 'financier':
+        msg = get_text(lang, 'registration_complete',
+            name=full_name,
+            role=get_text(lang, role_key),
+            branch=get_text(lang, 'role')  # Placeholder, not shown
+        ).split('🏢')[0]  # Remove branch line
+    else:
+        branch_key = f"branch_{branch}"
+        msg = get_text(lang, 'registration_complete',
+            name=full_name,
+            role=get_text(lang, role_key),
+            branch=get_text(lang, branch_key)
+        )
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            get_text(lang, 'open_app'),
+            web_app={'url': f"{WEBAPP_URL}?user_id={telegram_id}&lang={lang}&role={role}&branch={branch}"}
+        )]
+    ])
+    
+    message = update.callback_query.message if update.callback_query else update.message
+    await message.reply_text(msg, reply_markup=keyboard)
+    
+    return ConversationHandler.END
+
+async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Show settings menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    telegram_id = update.effective_user.id
+    user = get_user_by_telegram_id(telegram_id)
+    
+    if not user:
+        await query.edit_message_text("User not found")
+        return ConversationHandler.END
+    
+    lang = user.get('language', 'ru')
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'change_language'), callback_data='setting_language')],
+        [InlineKeyboardButton(get_text(lang, 'change_fio'), callback_data='setting_fio')],
+        [InlineKeyboardButton(get_text(lang, 'change_role'), callback_data='setting_role')],
+        [InlineKeyboardButton(get_text(lang, 'change_branch'), callback_data='setting_branch')],
+        [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_main')],
+    ])
+    
+    await query.edit_message_text(
+        get_text(lang, 'settings_menu'),
+        reply_markup=keyboard
+    )
+    return SETTINGS
+
+async def setting_language_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle language change"""
+    query = update.callback_query
+    await query.answer()
+    
+    telegram_id = update.effective_user.id
+    user = get_user_by_telegram_id(telegram_id)
+    current_lang = user.get('language', 'ru')
+    new_lang = 'uz' if current_lang == 'ru' else 'ru'
+    
+    save_user(telegram_id, user['full_name'], user['role'], user['branch'], new_lang)
+    
+    await query.edit_message_text(get_text(new_lang, 'language_changed'))
+    await start(update, context)
+    return ConversationHandler.END
+
+async def setting_fio_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle FIO change request"""
+    query = update.callback_query
+    await query.answer()
+    
+    telegram_id = update.effective_user.id
+    user = get_user_by_telegram_id(telegram_id)
+    lang = user.get('language', 'ru')
+    
+    context.user_data['language'] = lang
+    context.user_data['role'] = user['role']
+    context.user_data['branch'] = user['branch']
+    context.user_data['changing_setting'] = 'fio'
+    
+    await query.edit_message_text(get_text(lang, 'enter_fio'))
+    return FIO
+
+async def setting_role_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle role change request"""
+    query = update.callback_query
+    await query.answer()
+    
+    telegram_id = update.effective_user.id
+    user = get_user_by_telegram_id(telegram_id)
+    lang = user.get('language', 'ru')
+    
+    context.user_data['language'] = lang
+    context.user_data['full_name'] = user['full_name']
+    context.user_data['changing_setting'] = 'role'
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
+        [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
+        [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+    ])
+    
+    await query.edit_message_text(get_text(lang, 'select_role'), reply_markup=keyboard)
+    return ROLE
+
+async def setting_branch_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle branch change request"""
+    query = update.callback_query
+    await query.answer()
+    
+    telegram_id = update.effective_user.id
+    user = get_user_by_telegram_id(telegram_id)
+    lang = user.get('language', 'ru')
+    
+    context.user_data['language'] = lang
+    context.user_data['full_name'] = user['full_name']
+    context.user_data['role'] = user['role']
+    context.user_data['changing_setting'] = 'branch'
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(get_text(lang, 'branch_chilanzar'), callback_data='branch_chilanzar')],
+        [InlineKeyboardButton(get_text(lang, 'branch_uchtepa'), callback_data='branch_uchtepa')],
+        [InlineKeyboardButton(get_text(lang, 'branch_shayzantaur'), callback_data='branch_shayzantaur')],
+        [InlineKeyboardButton(get_text(lang, 'branch_olmazar'), callback_data='branch_olmazar')],
+    ])
+    
+    await query.edit_message_text(get_text(lang, 'select_branch'), reply_markup=keyboard)
+    return BRANCH
 
 async def back_to_main_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Return to main menu"""
