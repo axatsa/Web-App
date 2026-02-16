@@ -323,8 +323,8 @@ async def password_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text(get_text(lang, 'wrong_password'))
         return PASSWORD
     
-    # If financier, skip branch selection
-    if role == 'financier':
+    # If financier or supplier, skip branch selection
+    if role in ['financier', 'supplier']:
         context.user_data['branch'] = 'all'
         return await finalize_registration(update, context)
     
@@ -365,7 +365,7 @@ async def finalize_registration(update: Update, context: ContextTypes.DEFAULT_TY
     
     # Build confirmation message
     role_key = f"role_{role}"
-    if role == 'financier':
+    if role in ['financier', 'supplier']:
         msg = get_text(lang, 'registration_complete',
             name=full_name,
             role=get_text(lang, role_key),
