@@ -248,40 +248,50 @@ export default function App() {
 
   // ... (inside the component)
 
+  const [chefTab, setChefTab] = useState<'order' | 'delivery'>('order');
+
   // Для шеф-повара - находим или создаем заявку для выбранного филиала
-  let currentOrder = orders.find(o => o.branch === selectedBranch && (o.status === 'sent_to_chef' || o.status === 'chef_checking'));
+  let currentOrder: Order | undefined;
 
-  if (!currentOrder) {
-    // ВАЖНО: Проверяем, что продукты уже загрузились из API
-    if (isLoadingProducts) {
-      // Показываем загрузку, пока продукты не загрузятся
-      return (
-        <div className="h-screen flex items-center justify-center bg-[#f5f5f5]">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-[#8B0000] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 font-medium">Загрузка продуктов...</p>
-          </div>
-        </div>
-      );
+  if (selectedRole === 'chef') {
+    if (chefTab === 'order') {
+      currentOrder = orders.find(o => o.branch === selectedBranch && o.status === 'sent_to_chef');
+
+      if (!currentOrder) {
+        // ВАЖНО: Проверяем, что продукты уже загрузились из API
+        if (isLoadingProducts) {
+          // Показываем загрузку, пока продукты не загрузятся
+          return (
+            <div className="h-screen flex items-center justify-center bg-[#f5f5f5]">
+              <div className="text-center">
+                <div className="w-16 h-16 border-4 border-[#8B0000] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600 font-medium">Загрузка продуктов...</p>
+              </div>
+            </div>
+          );
+        }
+
+        // Создаем новую заявку с базовым списком продуктов из БД
+        const baseProducts = masterProducts.map((p) => ({
+          ...p,
+          quantity: 0,
+          price: undefined,
+          comment: undefined
+        }));
+
+        currentOrder = {
+          id: Date.now().toString(),
+          status: 'sent_to_chef',
+          createdAt: getTashkentDate(),
+          branch: selectedBranch!,
+          products: baseProducts,
+        };
+      }
+    } else {
+      // delivery tab
+      currentOrder = orders.find(o => o.branch === selectedBranch && o.status === 'chef_checking');
     }
-
-    // Создаем новую заявку с базовым списком продуктов из БД
-    const baseProducts = masterProducts.map((p) => ({
-      ...p,
-      quantity: 0,
-      price: undefined,
-      comment: undefined
-    }));
-
-    currentOrder = {
-      id: Date.now().toString(),
-      status: 'sent_to_chef',
-      createdAt: getTashkentDate(),
-      branch: selectedBranch,
-      products: baseProducts,
-    };
   }
-
 
   const handleBack = () => {
     setSelectedBranch(null);
@@ -289,16 +299,32 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
-      {selectedRole === 'chef' && (
+      {selectedRole === 'chef' && currentOrder ? (
         <ChefView
           order={currentOrder}
           onUpdateOrder={saveOrder}
           onBackToRoles={() => setSelectedBranch(null)}
-          branch={selectedBranch}
+          branch={selectedBranch!}
           onRefresh={loadOrders}
           isFromBot={isFromBot}
+          chefTab={chefTab}
+          onSetChefTab={setChefTab}
         />
-      )}
+      ) : selectedRole === 'chef' && !currentOrder && chefTab === 'delivery' ? (
+        <ChefView
+          order={
+            // Dummy empty order for "No deliveries" state
+            { id: 'empty', status: 'chef_checking', branch: selectedBranch!, products: [], createdAt: new Date() }
+          }
+          onUpdateOrder={saveOrder}
+          onBackToRoles={() => setSelectedBranch(null)}
+          branch={selectedBranch!}
+          onRefresh={loadOrders}
+          isFromBot={isFromBot}
+          chefTab={chefTab}
+          onSetChefTab={setChefTab}
+        />
+      ) : null}
     </div>
   );
 }
