@@ -1,5 +1,10 @@
 
-const API_URL = 'http://localhost:8000';
+// Use Docker service name 'api' for container-to-container communication
+// For local development outside Docker, use 'localhost:8000'
+const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? 'http://46.62.152.128:8000'  // Production server
+    : 'http://localhost:8000';     // Local development
+
 
 export type Product = {
     id: string;
