@@ -60,6 +60,7 @@ export default function App() {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [masterProducts, setMasterProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
   const loadInitialData = async () => {
     try {
@@ -70,8 +71,10 @@ export default function App() {
 
       setOrders(ordersData);
       setMasterProducts(productsData);
+      setIsLoadingProducts(false);
     } catch (error) {
       console.error('Error loading initial data:', error);
+      setIsLoadingProducts(false); // Stop loading even on error
     }
   };
 
@@ -250,7 +253,7 @@ export default function App() {
 
   if (!currentOrder) {
     // ВАЖНО: Проверяем, что продукты уже загрузились из API
-    if (masterProducts.length === 0) {
+    if (isLoadingProducts) {
       // Показываем загрузку, пока продукты не загрузятся
       return (
         <div className="h-screen flex items-center justify-center bg-[#f5f5f5]">
