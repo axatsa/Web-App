@@ -90,14 +90,14 @@ export default function App() {
   useEffect(() => {
     loadInitialData();
 
-    // Use polling as a replacement for Supabase Real-time
-    const interval = setInterval(() => {
-      loadOrders();
-    }, 5000);
+    // Polling disabled to prevent data reset while editing
+    // const interval = setInterval(() => {
+    //   loadOrders();
+    // }, 5000);
 
-    return () => {
-      clearInterval(interval);
-    };
+    // return () => {
+    //   clearInterval(interval);
+    // };
   }, []);
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
