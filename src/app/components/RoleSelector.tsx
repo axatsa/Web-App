@@ -1,6 +1,7 @@
 import type { Role } from '@/lib/api';
 import logo from '@/assets/logo.png';
 import { useLanguage } from '@/app/context/LanguageContext';
+import { ChefHat, Wallet, Truck } from 'lucide-react';
 
 type RoleSelectorProps = {
   onSelectRole: (role: Role) => void;
