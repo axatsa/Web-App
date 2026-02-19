@@ -434,6 +434,11 @@ export function FinancierDetailView({ order, onUpdateOrder, onBackToRoles, branc
                                                                         </span>
                                                                     )}
                                                                 </div>
+                                                                {product.lastPrice && (
+                                                                    <div className="text-xs text-gray-400 mt-1">
+                                                                        Цена последний раз: <b>{product.lastPrice.toLocaleString()}</b> сум
+                                                                    </div>
+                                                                )}
                                                                 {product.comment && (
                                                                     <div className="flex items-start gap-2 text-xs text-blue-600 bg-blue-50 p-2 rounded-lg mt-2">
                                                                         <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />

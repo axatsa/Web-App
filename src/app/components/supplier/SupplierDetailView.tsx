@@ -30,8 +30,12 @@ export function SupplierDetailView({ order, onUpdateOrder, onBackToRoles, branch
     );
 
     // Синхронизация localProducts при изменении order.products
+    // Синхронизация localProducts при изменении order.products
     useEffect(() => {
-        setLocalProducts(order.products);
+        setLocalProducts(order.products.map(p => ({
+            ...p,
+            price: (p.price && p.price > 0) ? p.price : (p.lastPrice || 0)
+        })));
     }, [order.products]);
 
     const handleUpdateProduct = (productId: string, field: 'price' | 'comment' | 'checked' | 'deliveryDate', value: any) => {
@@ -181,6 +185,11 @@ export function SupplierDetailView({ order, onUpdateOrder, onBackToRoles, branch
                                                                 <span className="text-gray-400">
                                                                     {((product.price || 0) * product.quantity).toLocaleString()}
                                                                 </span>
+                                                                {product.lastPrice && !product.price && (
+                                                                    <span className="text-gray-300 text-[10px] ml-1">
+                                                                        (пред.: {product.lastPrice})
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

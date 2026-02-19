@@ -56,9 +56,17 @@ def init_db():
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         category TEXT NOT NULL,
-        unit TEXT NOT NULL
+        unit TEXT NOT NULL,
+        last_price REAL
     )
-    ''')
+    ''') 
+    
+    # Check if last_price column exists (migration)
+    try:
+        cursor.execute("SELECT last_price FROM master_products LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE master_products ADD COLUMN last_price REAL")
+        conn.commit()
     
     conn.commit()
     conn.close()
@@ -170,6 +178,7 @@ class Product(BaseModel):
     checked: Optional[bool] = None
     chefComment: Optional[str] = None
     deliveryDate: Optional[str] = None
+    lastPrice: Optional[float] = None
 
 class Order(BaseModel):
     id: str
@@ -190,12 +199,17 @@ async def get_products():
     
     products = []
     for row in rows:
+        # row: (id, name, category, unit, last_price)
+        # Note: newer rows might have 5 columns, older table definitions might need migration if not handled by init_db
+        last_price = row[4] if len(row) > 4 else None
+        
         products.append({
             "id": row[0],
             "name": row[1],
             "category": row[2],
             "unit": row[3],
-            "quantity": 0 # Default for selection
+            "quantity": 0, # Default for selection
+            "lastPrice": last_price
         })
     return products
 
@@ -207,12 +221,26 @@ async def get_orders():
     rows = cursor.fetchall()
     conn.close()
     
+    # Fetch last prices map
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, last_price FROM master_products")
+    # Store as dict for O(1) access
+    last_prices = {row[0]: row[1] for row in cursor.fetchall()}
+    conn.close()
+
     orders = []
     for row in rows:
+        order_products = json.loads(row[2])
+        # Inject lastPrice into products if not present or just to be sure
+        for p in order_products:
+            if 'id' in p and p['id'] in last_prices:
+                p['lastPrice'] = last_prices[p['id']]
+                
         orders.append({
             "id": row[0],
             "status": row[1],
-            "products": json.loads(row[2]),
+            "products": order_products,
             "createdAt": row[3],
             "deliveredAt": row[4],
             "estimatedDeliveryDate": row[5],
@@ -238,6 +266,11 @@ async def upsert_order(order: Order):
         estimatedDeliveryDate=excluded.estimatedDeliveryDate,
         branch=excluded.branch
     ''', (order.id, order.status, products_json, order.createdAt, order.deliveredAt, order.estimatedDeliveryDate, order.branch))
+    
+    # Update last_price for products with valid price
+    for p in order.products:
+        if p.price and p.price > 0:
+            cursor.execute("UPDATE master_products SET last_price = ? WHERE id = ?", (p.price, p.id))
     
     conn.commit()
     conn.close()

@@ -17,6 +17,7 @@ export type Product = {
     checked?: boolean;
     chefComment?: string;
     deliveryDate?: string;
+    lastPrice?: number;
 };
 
 export type Status =
