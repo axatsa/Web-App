@@ -113,8 +113,13 @@ export default function App() {
     });
 
     // Close detail view if open
+    // Close detail view if open
     setSelectedOrderId(null);
-    setSelectedBranch(null);
+
+    // Only reset branch if role is NOT chef (chef should stay on the same branch view)
+    if (selectedRole !== 'chef') {
+      setSelectedBranch(null);
+    }
 
     // 2. Send to local API
     try {

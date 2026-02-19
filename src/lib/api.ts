@@ -30,6 +30,8 @@ export type Status =
     | 'financier_checking'
     | 'completed';
 
+export type Role = 'chef' | 'financier' | 'supplier';
+
 export type Branch = 'chilanzar' | 'uchtepa' | 'shayzantaur' | 'olmazar';
 
 export type Order = {
