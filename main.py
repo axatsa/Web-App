@@ -296,10 +296,35 @@ async def fio_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     
     # Check for Back button
     if text == get_text(lang, 'back'):
+        if context.user_data.get('changing_setting') == 'fio':
+            return await settings_menu(update, context)
         return await start(update, context)
         
     context.user_data['full_name'] = text
     
+    # If changing FIO from settings, save and return to settings
+    if context.user_data.get('changing_setting') == 'fio':
+        user = get_user_by_telegram_id(update.effective_user.id)
+        # Update user with new name, keep other fields
+        save_user(update.effective_user.id, text, user['role'], user['branch'], lang)
+        
+        await update.message.reply_text(
+            get_text(lang, 'fio_changed', name=text),
+            reply_markup=ReplyKeyboardRemove()
+        )
+        # We need to send the settings menu again. 
+        # Since we are in a message handler, we can't edit the previous inline message easily.
+        # So we send a new message.
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(get_text(lang, 'change_language'), callback_data='setting_language')],
+            [InlineKeyboardButton(get_text(lang, 'change_fio'), callback_data='setting_fio')],
+            [InlineKeyboardButton(get_text(lang, 'change_role'), callback_data='setting_role')],
+            [InlineKeyboardButton(get_text(lang, 'change_branch'), callback_data='setting_branch')],
+            [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_main')],
+        ])
+        await update.message.reply_text(get_text(lang, 'settings_menu'), reply_markup=keyboard)
+        return SETTINGS
+
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
         [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
@@ -322,6 +347,10 @@ async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     data = query.data
     
     # Handle Back button
+    # Handle Back button
+    if data == 'back_to_settings':
+        return await settings_menu(update, context)
+
     if data == 'back_to_fio':
         await query.delete_message()
         # Ask for FIO again (with Back button)
@@ -354,13 +383,16 @@ async def password_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     text = update.message.text.strip()
     
     # Handle Back button
+    # Handle Back button
     if text == get_text(lang, 'back'):
         # Go back to Role selection
+        back_callback = 'back_to_settings' if context.user_data.get('changing_setting') == 'role' else 'back_to_fio'
+        
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
             [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
             [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
-            [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_fio')],
+            [InlineKeyboardButton(get_text(lang, 'back'), callback_data=back_callback)],
         ])
         await update.message.reply_text(
             get_text(lang, 'select_role'),
@@ -449,6 +481,11 @@ async def finalize_registration(update: Update, context: ContextTypes.DEFAULT_TY
             branch=get_text(lang, branch_key)
         )
     
+    # If coming from settings, we should probably return to settings instead of ending?
+    # But usually changing role/branch is a major change, so creating a new session (end) is fine.
+    # However, let's just make sure we clear the changing_setting flag
+    context.user_data.pop('changing_setting', None)
+    
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(
             get_text(lang, 'open_app'),
@@ -525,7 +562,18 @@ async def setting_fio_handle(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data['branch'] = user['branch']
     context.user_data['changing_setting'] = 'fio'
     
-    await query.edit_message_text(get_text(lang, 'enter_fio'))
+    # Send text request with Back button (ReplyMarkup)
+    keyboard = get_back_keyboard(lang)
+    try:
+        await query.delete_message()
+    except Exception:
+        pass # Message might be too old or already deleted
+        
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=get_text(lang, 'enter_fio'),
+        reply_markup=keyboard
+    )
     return FIO
 
 async def setting_role_handle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -545,6 +593,7 @@ async def setting_role_handle(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
         [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
         [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+        [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_settings')],
     ])
     
     await query.edit_message_text(get_text(lang, 'select_role'), reply_markup=keyboard)
@@ -569,6 +618,7 @@ async def setting_branch_handle(update: Update, context: ContextTypes.DEFAULT_TY
         [InlineKeyboardButton(get_text(lang, 'branch_uchtepa'), callback_data='branch_uchtepa')],
         [InlineKeyboardButton(get_text(lang, 'branch_shayzantaur'), callback_data='branch_shayzantaur')],
         [InlineKeyboardButton(get_text(lang, 'branch_olmazar'), callback_data='branch_olmazar')],
+        [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_settings')],
     ])
     
     await query.edit_message_text(get_text(lang, 'select_branch'), reply_markup=keyboard)
@@ -610,9 +660,15 @@ def main() -> None:
         states={
             LANGUAGE: [CallbackQueryHandler(language_selected, pattern='^lang_')],
             FIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, fio_entered)],
-            ROLE: [CallbackQueryHandler(role_selected, pattern='^role_')],
+            ROLE: [
+                CallbackQueryHandler(role_selected, pattern='^role_'),
+                CallbackQueryHandler(settings_menu, pattern='^back_to_settings$'), # Handle back from role (settings mode)
+            ],
             PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, password_entered)],
-            BRANCH: [CallbackQueryHandler(branch_selected, pattern='^branch_')],
+            BRANCH: [
+                CallbackQueryHandler(branch_selected, pattern='^branch_'),
+                CallbackQueryHandler(settings_menu, pattern='^back_to_settings$'), # Handle back from branch (settings mode)
+            ],
             SETTINGS: [
                 CallbackQueryHandler(setting_language_handle, pattern='^setting_language$'),
                 CallbackQueryHandler(setting_fio_handle, pattern='^setting_fio$'),
