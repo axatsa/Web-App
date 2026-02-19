@@ -275,21 +275,36 @@ async def language_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     lang = query.data.split('_')[1]  # Extract 'ru' or 'uz' from 'lang_ru'
     context.user_data['language'] = lang
     
-    await query.edit_message_text(
-        get_text(lang, 'enter_fio'),
-        reply_markup=None
+    # Send message with Back button (ReplyMarkup)
+    keyboard = get_back_keyboard(lang)
+    
+    # Delete the inline keyboard message or edit it? 
+    # Usually better to delete the inline menu to avoid confusion and send a new message with ReplyMarkup
+    await query.delete_message()
+    
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=get_text(lang, 'enter_fio'),
+        reply_markup=keyboard
     )
     return FIO
 
 async def fio_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle FIO entry"""
     lang = context.user_data.get('language', 'ru')
-    context.user_data['full_name'] = update.message.text
+    text = update.message.text
+    
+    # Check for Back button
+    if text == get_text(lang, 'back'):
+        return await start(update, context)
+        
+    context.user_data['full_name'] = text
     
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
         [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
         [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+        [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_fio')],
     ])
     
     await update.message.reply_text(
@@ -304,12 +319,31 @@ async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     await query.answer()
     
     lang = context.user_data.get('language', 'ru')
-    role = query.data.split('_')[1]  # Extract 'chef', 'financier', or 'supplier'
+    data = query.data
+    
+    # Handle Back button
+    if data == 'back_to_fio':
+        await query.delete_message()
+        # Ask for FIO again (with Back button)
+        keyboard = get_back_keyboard(lang)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=get_text(lang, 'enter_fio'),
+            reply_markup=keyboard
+        )
+        return FIO
+        
+    role = data.split('_')[1]  # Extract 'chef', 'financier', or 'supplier'
     context.user_data['role'] = role
     
-    await query.edit_message_text(
-        get_text(lang, 'enter_password', role=get_text(lang, f'role_{role}')),
-        reply_markup=None
+    # Show Back button (ReplyMarkup) for password entry
+    keyboard = get_back_keyboard(lang)
+    
+    await query.delete_message()
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=get_text(lang, 'enter_password', role=get_text(lang, f'role_{role}')),
+        reply_markup=keyboard
     )
     return PASSWORD
 
@@ -317,10 +351,25 @@ async def password_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     """Handle password entry"""
     lang = context.user_data.get('language', 'ru')
     role = context.user_data.get('role')
-    password = update.message.text.strip()
+    text = update.message.text.strip()
     
-    if password != ROLE_PASSWORDS.get(role):
-        await update.message.reply_text(get_text(lang, 'wrong_password'))
+    # Handle Back button
+    if text == get_text(lang, 'back'):
+        # Go back to Role selection
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
+            [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
+            [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+            [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_fio')],
+        ])
+        await update.message.reply_text(
+            get_text(lang, 'select_role'),
+            reply_markup=keyboard
+        )
+        return ROLE
+    
+    if text != ROLE_PASSWORDS.get(role):
+        await update.message.reply_text(get_text(lang, 'wrong_password'), reply_markup=get_back_keyboard(lang))
         return PASSWORD
     
     # If financier or supplier, skip branch selection
@@ -334,6 +383,7 @@ async def password_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         [InlineKeyboardButton(get_text(lang, 'branch_uchtepa'), callback_data='branch_uchtepa')],
         [InlineKeyboardButton(get_text(lang, 'branch_shayzantaur'), callback_data='branch_shayzantaur')],
         [InlineKeyboardButton(get_text(lang, 'branch_olmazar'), callback_data='branch_olmazar')],
+        [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_role')],
     ])
     
     await update.message.reply_text(
@@ -347,7 +397,27 @@ async def branch_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = update.callback_query
     await query.answer()
     
-    branch = query.data.split('_')[1]
+    lang = context.user_data.get('language', 'ru')
+    data = query.data
+    
+    # Handle Back button
+    if data == 'back_to_role':
+        await query.delete_message()
+        # Go back to Role selection (skipping FIO entry)
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(get_text(lang, 'role_chef'), callback_data='role_chef')],
+            [InlineKeyboardButton(get_text(lang, 'role_financier'), callback_data='role_financier')],
+            [InlineKeyboardButton(get_text(lang, 'role_supplier'), callback_data='role_supplier')],
+            [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_fio')],
+        ])
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=get_text(lang, 'select_role'),
+            reply_markup=keyboard
+        )
+        return ROLE
+    
+    branch = data.split('_')[1]
     context.user_data['branch'] = branch
     
     return await finalize_registration(update, context)
@@ -393,15 +463,21 @@ async def finalize_registration(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show settings menu"""
-    query = update.callback_query
-    await query.answer()
+    # Handle both callback query and command message
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        telegram_id = update.effective_user.id
+        message_func = query.edit_message_text
+    else:
+        telegram_id = update.effective_user.id
+        message_func = update.message.reply_text
     
-    telegram_id = update.effective_user.id
     user = get_user_by_telegram_id(telegram_id)
     
     if not user:
-        await query.edit_message_text("User not found")
-        return ConversationHandler.END
+        # If user not found, try to register
+        return await start(update, context)
     
     lang = user.get('language', 'ru')
     
@@ -413,7 +489,7 @@ async def settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         [InlineKeyboardButton(get_text(lang, 'back'), callback_data='back_to_main')],
     ])
     
-    await query.edit_message_text(
+    await message_func(
         get_text(lang, 'settings_menu'),
         reply_markup=keyboard
     )
@@ -528,6 +604,7 @@ def main() -> None:
     conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler('start', start),
+            CommandHandler('settings', settings_menu),
             CallbackQueryHandler(settings_menu, pattern='^settings$'),
         ],
         states={
