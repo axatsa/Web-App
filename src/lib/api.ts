@@ -2,7 +2,7 @@
 // Use Docker service name 'api' for container-to-container communication
 // For local development outside Docker, use 'localhost:8000'
 export const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-    ? 'https://editorials-provides-wives-competitors.trycloudflare.com'  // Cloudflare Tunnel (HTTPS)
+    ? 'https://jose-raleigh-biotechnology-temperature.trycloudflare.com'  // Cloudflare Tunnel (HTTPS)
     : 'http://localhost:8000';     // Local development
 
 
