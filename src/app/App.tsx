@@ -102,6 +102,7 @@ export default function App() {
   }, []);
 
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [chefTab, setChefTab] = useState<'order' | 'delivery'>('order');
 
   const saveOrder = async (updatedOrder: Order) => {
     // 1. Optimistic Update (Update local state immediately)
@@ -252,11 +253,7 @@ export default function App() {
     );
   }
 
-  // ... (inside the component)
 
-  const [chefTab, setChefTab] = useState<'order' | 'delivery'>('order');
-
-  // Для шеф-повара - находим или создаем заявку для выбранного филиала
   let currentOrder: Order | undefined;
 
   if (selectedRole === 'chef') {
